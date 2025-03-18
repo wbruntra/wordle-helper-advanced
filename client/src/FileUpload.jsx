@@ -20,15 +20,12 @@ function FileUpload({ fileUrl, setFileUrl }) {
     setUploadStatus('Preparing upload...')
 
     try {
-      // 1. Get presigned URL from backend
       const { data } = await axios.post('/api/get-presigned-url', {
         fileName: selectedFile.name,
         fileType: selectedFile.type,
       })
 
-      setUploadStatus('Uploading to S3...')
-
-      // 2. Upload directly to S3 using presigned URL
+      setUploadStatus('Uploading screenshot...')
 
       await axios.put(data.presignedUrl, selectedFile, {
         headers: {
@@ -46,32 +43,80 @@ function FileUpload({ fileUrl, setFileUrl }) {
   }
 
   return (
-    <div style={{ padding: '20px' }}>
-      <h2>Upload File to S3</h2>
-
-      <input type="file" onChange={handleFileChange} style={{ margin: '10px 0' }} />
-
-      <button
-        onClick={handleUpload}
-        disabled={!selectedFile}
+    <div
+      style={{
+        padding: '15px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '15px',
+        maxWidth: '100%',
+        boxSizing: 'border-box',
+      }}
+    >
+      <h2
         style={{
-          padding: '8px 16px',
-          backgroundColor: selectedFile ? '#007bff' : '#ccc',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: selectedFile ? 'pointer' : 'not-allowed',
+          fontSize: '1.5rem',
+          margin: 0,
+          '@media (maxWidth: 768px)': {
+            fontSize: '1.2rem',
+          },
         }}
       >
-        Upload
-      </button>
+        Upload Screenshot
+      </h2>
+
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          '@media (maxWidth: 768px)': {
+            gap: '8px',
+          },
+        }}
+      >
+        <input
+          type="file"
+          onChange={handleFileChange}
+          style={{
+            width: '100%',
+            padding: '8px',
+            boxSizing: 'border-box',
+          }}
+        />
+
+        <button
+          onClick={handleUpload}
+          disabled={!selectedFile}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: selectedFile ? '#007bff' : '#ccc',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: selectedFile ? 'pointer' : 'not-allowed',
+            width: '100%',
+            maxWidth: '200px',
+            fontSize: '1rem',
+            '@media (maxWidth: 768px)': {
+              padding: '8px 16px',
+              fontSize: '0.9rem',
+            },
+          }}
+        >
+          Upload
+        </button>
+      </div>
 
       {uploadStatus && (
         <p
           style={{
-            margin: '10px 0',
+            margin: 0,
+            padding: '8px',
             color:
               uploadStatus.includes('Error') || uploadStatus.includes('failed') ? 'red' : 'green',
+            wordBreak: 'break-word',
+            fontSize: '0.9rem',
           }}
         >
           {uploadStatus}
@@ -79,9 +124,25 @@ function FileUpload({ fileUrl, setFileUrl }) {
       )}
 
       {fileUrl && (
-        <div>
-          <p>File URL:</p>
-          <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '5px',
+          }}
+        >
+          <p style={{ margin: 0, fontSize: '0.9rem' }}>File URL:</p>
+          <a
+            href={fileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              wordBreak: 'break-all',
+              color: '#007bff',
+              textDecoration: 'none',
+              fontSize: '0.85rem',
+            }}
+          >
             {fileUrl}
           </a>
         </div>
