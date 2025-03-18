@@ -1,0 +1,84 @@
+body {
+  margin: 0;
+  font-family: 'Roboto Mono', source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+input {
+  background-color: #282c34;
+  font-size: 2em;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+.font-mono {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+body {
+  background-color: #282c34;
+}
+
+.container {
+  background-color: #282c34;
+  /* font-size: calc(10px + 2vmin); */
+  color: white;
+}
+
+input {
+  color: white;
+  font-size: 1.2em;
+}
+
+.guess {
+  font-size: 1.8em;
+  margin-top: 8px;
+}
+
+.active-box {
+  color: black;
+  background-color: white;
+}
+
+.green {
+  background-color: #6faf62;
+}
+
+.yellow {
+  background-color: #ddaa28;
+}
+
+.gray {
+  background-color: #82869b;
+}
+
+.white {
+  background-color: #3a405d;
+}
+
+.ml-3 {
+  margin-left: 12px;
+}
+
+.mb-0 {
+  margin-bottom: 0;
+}
+
+.selectable-guess {
+  cursor: pointer;
+}
+
+.btn {
+  border-radius: 0.4rem;
+  text-align: center;
+  text-decoration: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 0.9rem;
+}
+
+.btn-primary {
+  background-color: #9b4dca;
+  border: 0.1rem solid #9b4dca;
+}

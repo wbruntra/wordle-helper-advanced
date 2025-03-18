@@ -1,0 +1,111 @@
+input {
+  color: white;
+  font-size: 1.2em;
+
+  &::placeholder {
+    color: white; // Use semi-transparent white
+    opacity: 1; // Firefox sometimes needs this
+  }
+}
+
+ul {
+  list-style-type: none;
+  text-align: center;
+  margin: auto;
+
+}
+
+.guess {
+  font-size: 1.8em;
+  margin-top: 8px;
+}
+
+.delete {
+  // margin-left: 36px;
+  padding: 6px;
+  cursor: pointer;
+}
+
+.letter-box {
+  font-size: 0.9em;
+  padding: 2px 4px;
+  display: inline-block;
+  margin-left: 4px;
+
+  &.missed-guess {
+    background-color: #4b4f64 !important;
+  }
+}
+
+@media screen and (min-width: 770px) {
+  .letter-box {
+    padding: 2px 12px;
+    margin-left: 8px;
+    font-size: 1.1em;
+  }
+}
+
+.error {
+  font-weight: 700;
+  color: red;
+  margin-bottom: 1rem;
+}
+
+.active-box {
+  display: inline;
+  height: 24px;
+  width: 16px;
+}
+
+.guess {
+  // display: flex;
+  margin-bottom: 0.2rem;
+}
+
+h1 {
+  margin-bottom: 1rem;
+}
+
+$dark-gray: #282c34;
+
+.entry-form {
+  input[type='text'] {
+    background-color: $dark-gray;
+    font-size: 1.7em;
+    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+    text-align: center;
+
+    &::placeholder {
+      color: white; // Use semi-transparent white
+      opacity: 1; // Firefox sometimes needs this
+    }
+  }
+}
+
+.selectable {
+  cursor: pointer;
+}
+
+.form-control,
+.form-control:focus {
+  background: none;
+  border: none;
+  border-bottom: 1px solid #434a52;
+  border-radius: 0;
+  box-shadow: none;
+  outline: none;
+  color: inherit;
+  font-size: 1.7em;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+  // text-align: center;
+}
+
+.example {
+  font-size: 1.3em;
+}
+
+.tooltip-underline {
+  text-decoration-style: dotted;
+  text-decoration-line: underline;
+  text-underline-offset: 4px;
+}
