@@ -4,10 +4,10 @@ const { Jimp, intToRGBA } = require('jimp')
 
 const getColorName = (r, g, b) => {
   const knownColors = [
-    { name: 'green', r: 83, g: 141, b: 78, a: 1 },
+    { name: 'G', r: 83, g: 141, b: 78, a: 1 },
     { name: 'black', r: 18, g: 18, b: 19, a: 1 },
-    { name: 'gray', r: 58, g: 58, b: 60, a: 1 },
-    { name: 'yellow', r: 181, g: 159, b: 59, a: 1 },
+    { name: '-', r: 58, g: 58, b: 60, a: 1 },
+    { name: 'Y', r: 181, g: 159, b: 59, a: 1 },
     { name: 'white', r: 255, g: 255, b: 255, a: 1 },
   ]
 

@@ -1,37 +1,18 @@
-const fs = require('fs')
 const PNG = require('pngjs').PNG
-const path = require('path')
-const { identifyColor, getColorName } = require('./identifyColor')
+const { getColorName } = require('./identifyColor')
 
-const generateBackgroundMatcher = (referenceBackground) => {
-  return (r, g, b, a) => {
-    return (
-      r === referenceBackground.r &&
-      g === referenceBackground.g &&
-      b === referenceBackground.b &&
-      a === referenceBackground.a
-    )
-  }
-}
+// Constants and Utilities
+const COLORS = {
+  BLACK: { r: 18, g: 18, b: 19, a: 255 },
+  WHITE: { r: 255, g: 255, b: 255, a: 1 },
+};
 
-// Function to check if a pixel matches rgba(18, 18, 19, 1)
-const referenceBlack = {
-  r: 18,
-  g: 18,
-  b: 19,
-  a: 255,
-}
+const generateColorMatcher = (refColor) => (r, g, b, a) =>
+  r === refColor.r && g === refColor.g && b === refColor.b && a === refColor.a;
 
-const referenceWhite = {
-  r: 255,
-  g: 255,
-  b: 255,
-  a: 1,
-}
+const isBackgroundColor = generateColorMatcher(COLORS.BLACK);
 
-const isBackgroundColor = generateBackgroundMatcher(referenceBlack)
-
-// Function to scan a specific row (y-value) for boundaries
+// Function to scan a specific row for boundaries
 function scanRow(data, width, y, height) {
   let leftBoundary = -1
   let rightBoundary = -1
@@ -81,12 +62,11 @@ function findTopBoundary(data, width, leftBoundary, startY) {
   return 0
 }
 
-// New function to find the width of the first square
+// Function to find the width of the first square
 function findSquareWidth(data, width, leftBoundary, topBoundary) {
   let startBlack = -1
   let endBlack = -1
 
-  // Scan right from (leftBoundary, topBoundary) to find the first black pixel
   for (let x = leftBoundary; x < width; x++) {
     const idx = (topBoundary * width + x) * 4
     const r = data[idx]
@@ -100,12 +80,8 @@ function findSquareWidth(data, width, leftBoundary, topBoundary) {
     }
   }
 
-  // If no black pixel is found, return -1
-  if (startBlack === -1) {
-    return -1
-  }
+  if (startBlack === -1) return -1
 
-  // Continue right to find the end of the black border
   for (let x = startBlack + 1; x < width; x++) {
     const idx = (topBoundary * width + x) * 4
     const r = data[idx]
@@ -119,23 +95,68 @@ function findSquareWidth(data, width, leftBoundary, topBoundary) {
     }
   }
 
-  // If no end is found, assume the border goes to the edge (unlikely, but handle it)
-  if (endBlack === -1) {
-    return -1
-  }
+  if (endBlack === -1) return -1
 
-  // The width of the square is the distance from leftBoundary to startBlack
   return startBlack - leftBoundary
 }
 
-// Main function to find boundaries and crop
-function findObjectBoundaries(filePath) {
-  fs.createReadStream(filePath)
-    .pipe(new PNG())
-    .on('parsed', function () {
-      const width = this.width
-      const height = this.height
-      const data = this.data
+// Function to identify colors of all squares in all rows
+function identifySquareColors(
+  data,
+  width,
+  height,
+  leftBoundary,
+  topBoundary,
+  squareWidth,
+  singleBorderWidth,
+) {
+  const squareColors = []
+  const offsetX = 6
+  const offsetY = 6
+  const numRows = 6
+  const rowHeight = Math.round(
+    (height - topBoundary - (numRows - 1) * singleBorderWidth) / numRows,
+  )
+
+  for (let row = 0; row < numRows; row++) {
+    const rowColors = []
+    const sampleY = topBoundary + row * (rowHeight + singleBorderWidth) + offsetY
+
+    for (let i = 0; i < 5; i++) {
+      const squareStartX = leftBoundary + i * squareWidth + i * singleBorderWidth
+      const sampleX = squareStartX + offsetX
+
+      if (sampleX >= width || sampleY >= height) {
+        rowColors.push({ square: i + 1, color: 'Out of bounds', x: sampleX, y: sampleY })
+        continue
+      }
+
+      const idx = (sampleY * width + sampleX) * 4
+      const r = data[idx]
+      const g = data[idx + 1]
+      const b = data[idx + 2]
+
+      const color = getColorName(r, g, b)
+      rowColors.push({ square: i + 1, color, x: sampleX, y: sampleY })
+    }
+    squareColors.push({ row: row + 1, colors: rowColors })
+  }
+
+  return squareColors
+}
+
+// Main function to process a buffer and return results
+function findObjectBoundaries(buffer) {
+  return new Promise((resolve, reject) => {
+    new PNG().parse(buffer, (err, png) => {
+      if (err) {
+        reject(err)
+        return
+      }
+
+      const width = png.width
+      const height = png.height
+      const data = png.data
       let y = 0
       const yStep = 25
 
@@ -146,29 +167,57 @@ function findObjectBoundaries(filePath) {
           const objectWidth = rightBoundary - leftBoundary + 1
           const topBoundary = findTopBoundary(data, width, leftBoundary, y)
           const objectHeight = height - topBoundary
-
-          // Find the width of the first square
           const squareWidth = findSquareWidth(data, width, leftBoundary, topBoundary)
           const totalBorderWidth = objectWidth - 5 * squareWidth
           const singleBorderWidth = Math.round(totalBorderWidth / 4)
 
-          console.log(`Found boundaries at y = ${y}px:`)
-          console.log(`Left boundary: ${leftBoundary}px`)
-          console.log(`Right boundary: ${rightBoundary}px`)
-          console.log(`Top boundary: ${topBoundary}px`)
-          console.log(`Object width: ${objectWidth}px`)
-          console.log(`Object height: ${objectHeight}px`)
-          if (squareWidth !== -1) {
-            console.log(`First square width: ${squareWidth}px`)
-            console.log(`So of the total image, the borders occupy ${totalBorderWidth}px`)
-            console.log(`And each border is ${singleBorderWidth}px wide`)
-          } else {
-            console.log('Could not determine square width.')
+          let result = {
+            boundaries: { y, leftBoundary, rightBoundary, topBoundary },
+            object: { width: objectWidth, height: objectHeight },
+            squareWidth,
+            border: { totalBorderWidth, singleBorderWidth },
           }
 
-          // Crop the image
-          const cropped = new PNG({ width: objectWidth, height: objectHeight })
+          if (squareWidth !== -1) {
+            const squareColors = identifySquareColors(
+              data,
+              width,
+              height,
+              leftBoundary,
+              topBoundary,
+              squareWidth,
+              singleBorderWidth,
+            )
+            result.squareColors = squareColors
 
+            // Generate 5-character strings for each row
+            result.rowStrings = squareColors.map(({ row, colors }) => {
+              const hasBlack = colors.some((c) => c.color.toLowerCase() === 'black')
+              if (hasBlack) return { row, string: null }
+
+              const colorString = colors
+                .map((c) => {
+                  switch (c.color.toUpperCase()) {
+                    case 'G':
+                      return 'G' // Green
+                    case 'Y':
+                      return 'Y' // Yellow
+                    case '-':
+                      return '-' // Gray
+                    default:
+                      return '-' // Default to gray for unknown colors
+                  }
+                })
+                .join('')
+              return { row, string: colorString }
+            })
+          } else {
+            result.squareColors = null
+            result.rowStrings = null
+          }
+
+          // Return the cropped buffer instead of saving to disk
+          const cropped = new PNG({ width: objectWidth, height: objectHeight })
           for (let yCrop = 0; yCrop < objectHeight; yCrop++) {
             for (let x = 0; x < objectWidth; x++) {
               const sourceIdx = ((topBoundary + yCrop) * width + (leftBoundary + x)) * 4
@@ -181,31 +230,75 @@ function findObjectBoundaries(filePath) {
             }
           }
 
-          const outputFilePath = path.join(__dirname, 'data', 'cropped_object.png')
-          cropped
-            .pack()
-            .pipe(fs.createWriteStream(outputFilePath))
-            .on('finish', () => {
-              console.log(`Cropped image saved to ${outputFilePath}`)
-            })
-
+          result.croppedBuffer = PNG.sync.write(cropped)
+          resolve(result)
           return
         }
 
-        console.log(`No boundaries found at y = ${y}px, trying next row...`)
         y += yStep
       }
 
-      console.log('No object boundaries found in the entire image.')
+      resolve(null) // No boundaries found
     })
-    .on('error', function (err) {
-      console.error('Error processing image:', err)
-    })
+  })
 }
 
-const run = () => {
+// Example usage with a buffer
+const run = async (buffer) => {
+  try {
+    const result = await findObjectBoundaries(buffer)
+    if (result) {
+      console.log(`Found boundaries at y = ${result.boundaries.y}px:`)
+      console.log(`Left boundary: ${result.boundaries.leftBoundary}px`)
+      console.log(`Right boundary: ${result.boundaries.rightBoundary}px`)
+      console.log(`Top boundary: ${result.boundaries.topBoundary}px`)
+      console.log(`Object width: ${result.object.width}px`)
+      console.log(`Object height: ${result.object.height}px`)
+      if (result.squareWidth !== -1) {
+        console.log(`First square width: ${result.squareWidth}px`)
+        console.log(`Total border width: ${result.border.totalBorderWidth}px`)
+        console.log(`Each border width: ${result.border.singleBorderWidth}px`)
+        console.log('Square colors by row:')
+        result.squareColors.forEach(({ row, colors }) => {
+          console.log(`Row ${row}:`)
+          colors.forEach(({ square, color, x, y }) => {
+            console.log(`  Square ${square} (sampled at x=${x}, y=${y}): ${color}`)
+          })
+        })
+        console.log('Row color strings:')
+        result.rowStrings.forEach(({ row, string }) => {
+          console.log(`Row ${row}: ${string}`)
+        })
+      } else {
+        console.log('Could not determine square width.')
+      }
+      console.log('Cropped image buffer generated.')
+      // Optionally, you could save the buffer to disk here if needed:
+      // require('fs').writeFileSync('cropped_output.png', result.croppedBuffer);
+    } else {
+      console.log('No object boundaries found in the image.')
+    }
+    return result
+  } catch (err) {
+    console.error('Error processing image:', err)
+    throw err
+  }
+}
+
+// Example: If you still want to test with a file
+const testWithFile = async () => {
+  const fs = require('fs')
+  const path = require('path')
   const filepath = path.join(__dirname, 'data', 'test.png')
-  findObjectBoundaries(filepath)
+  const buffer = fs.readFileSync(filepath)
+  const result = await run(buffer)
+
+  console.log(result)
 }
 
-run()
+if (require.main === module) {
+  // Run the example with a buffer
+  testWithFile()
+}
+
+module.exports = { findObjectBoundaries }
