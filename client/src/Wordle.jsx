@@ -34,7 +34,9 @@ function Wordle() {
   const [showGuessInput, setShowGuessInput] = useState(true)
   const [showWordListModal, setShowWordListModal] = useState(false)
   const [answerInput, setAnswerInput] = useState('')
-  const [clickedGuess, setClickedGuess] = useState(null)
+  const [editingGuessIndex, setEditingGuessIndex] = useState(null)
+  const [editWord, setEditWord] = useState('')
+  const [editKey, setEditKey] = useState('')
 
   const [showUploadModal, setShowUploadModal] = useState(false)
 
@@ -52,7 +54,6 @@ function Wordle() {
 
   const addGuess = (e) => {
     e.preventDefault()
-    console.log(word)
     if (!(word.length === 5 && key.length === 5)) {
       setError('Invalid Input')
       return
@@ -66,18 +67,11 @@ function Wordle() {
         key: getCanonicalKey(key),
       },
     ]
-    // previewGuess(getCanonical(word), newGuesses)
-
-    console.log('setting to', newGuesses)
-    setClickedGuess(null)
-
     setGuesses(newGuesses)
     setWord('')
     setKey('')
     setTouched(true)
-
     document.activeElement.blur()
-
     inputEl.current.focus()
   }
 
@@ -85,6 +79,37 @@ function Wordle() {
     const newGuesses = [...guesses]
     newGuesses.splice(index, 1)
     setGuesses(newGuesses)
+  }
+
+  const startEditingGuess = (index) => {
+    setEditingGuessIndex(index)
+    setEditWord(guesses[index].word)
+    setEditKey(guesses[index].key)
+  }
+
+  const saveEditedGuess = (e) => {
+    e.preventDefault()
+    if (!(editWord.length === 5 && editKey.length === 5)) {
+      setError('Invalid Input')
+      return
+    }
+    const newGuesses = [...guesses]
+    newGuesses[editingGuessIndex] = {
+      word: getCanonical(editWord),
+      key: getCanonicalKey(editKey),
+    }
+    setGuesses(newGuesses)
+    setEditingGuessIndex(null)
+    setEditWord('')
+    setEditKey('')
+    setError('')
+  }
+
+  const cancelEditing = () => {
+    setEditingGuessIndex(null)
+    setEditWord('')
+    setEditKey('')
+    setError('')
   }
 
   return (
@@ -117,8 +142,6 @@ function Wordle() {
                 →
               </span>{' '}
               {example.key}
-              <br />
-              {/* (click to demonstrate) */}
             </p>
             <div className="mb-4">
               {word.length < 5 && (
@@ -134,60 +157,83 @@ function Wordle() {
             </div>
           </>
         )}
-        {(guesses.length > 0 || word.length === 5) && (
-          <div className="mb-4">
-            <div
-              style={{ visibility: word.length < 5 ? 'hidden' : 'visible' }}
-              className="guess"
-              onClick={() => {
-                setShowGuessInput(true)
-              }}
-            >
-              <Guess guess={{ word: word, key: (key + 'UUUUU').slice(0, 5) }} />
-            </div>
+
+        {/* New Guess Input */}
+        {editingGuessIndex === null && (
+          <div className="row justify-content-center">
+            <form className="mb-3 col-8 col-md-3" onSubmit={addGuess}>
+              <fieldset className="mb-2">
+                <input
+                  className="font-mono form-control"
+                  ref={inputEl}
+                  value={word}
+                  onChange={(e) => {
+                    setWord(e.target.value.toUpperCase())
+                    if (e.target.value.toUpperCase().length === 5 && answerInput.length === 5) {
+                      const newKey = evaluateToString(e.target.value.toUpperCase(), answerInput)
+                      setKey(newKey)
+                    }
+                  }}
+                  placeholder={showExample ? example.word : 'GUESS'}
+                />
+              </fieldset>
+              <fieldset className="mb-3">
+                <input
+                  className="font-mono form-control"
+                  value={key}
+                  onChange={(e) => setKey(e.target.value.toUpperCase())}
+                  placeholder={showExample ? example.key : `response`}
+                />
+              </fieldset>
+              <input
+                className="btn btn-primary"
+                type="submit"
+                value="Add Guess"
+                disabled={
+                  !(word.length === key.length && word.length === currentFilteredList[0].length)
+                }
+              />
+            </form>
           </div>
         )}
 
-        <div className="row justify-content-center">
-          <form className="mb-3 col-8 col-md-3" onSubmit={addGuess}>
-            <fieldset className="mb-2">
-              <input
-                className="font-mono form-control"
-                ref={inputEl}
-                value={word}
-                onChange={(e) => {
-                  setWord(e.target.value.toUpperCase())
-                  if (e.target.value.toUpperCase().length === 5 && answerInput.length === 5) {
-                    const newKey = evaluateToString(e.target.value.toUpperCase(), answerInput)
-                    setKey(newKey)
-                  }
-                }}
-                placeholder={showExample ? example.word : 'GUESS'}
-              />
-            </fieldset>
-            <fieldset className="mb-3">
-              <input
-                className="font-mono form-control"
-                value={key}
-                onChange={(e) => setKey(e.target.value.toUpperCase())}
-                placeholder={showExample ? example.key : `response`}
-              />
-            </fieldset>
-            <input
-              className="btn btn-primary"
-              type="submit"
-              value="Add Guess"
-              disabled={
-                !(word.length === key.length && word.length === currentFilteredList[0].length)
-              }
-            />
-          </form>
-          {error !== '' && (
-            <div>
-              <p className="error">{error}</p>
-            </div>
-          )}
-        </div>
+        {/* Edit Guess Form */}
+        {editingGuessIndex !== null && (
+          <div className="row justify-content-center">
+            <form className="mb-3 col-8 col-md-3" onSubmit={saveEditedGuess}>
+              <fieldset className="mb-2">
+                <input
+                  className="font-mono form-control"
+                  value={editWord}
+                  onChange={(e) => setEditWord(e.target.value.toUpperCase())}
+                  placeholder="GUESS"
+                />
+              </fieldset>
+              <fieldset className="mb-3">
+                <input
+                  className="font-mono form-control"
+                  value={editKey}
+                  onChange={(e) => setEditKey(e.target.value.toUpperCase())}
+                  placeholder="response"
+                />
+              </fieldset>
+              <div className="d-flex justify-content-between">
+                <button className="btn btn-primary" type="submit">
+                  Save
+                </button>
+                <button className="btn btn-secondary" type="button" onClick={cancelEditing}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {error !== '' && (
+          <div>
+            <p className="error">{error}</p>
+          </div>
+        )}
 
         <DisplayStatus
           guesses={guesses}
@@ -195,8 +241,7 @@ function Wordle() {
           resetGuesses={resetGuesses}
           startingList={currentFilteredList}
           removeGuess={removeGuess}
-          clickedGuess={clickedGuess}
-          setClickedGuess={setClickedGuess}
+          onGuessClick={startEditingGuess}
         />
       </div>
       <WordListModal
