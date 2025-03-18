@@ -1,0 +1,203 @@
+const PNG = require('pngjs').PNG
+const fs = require('fs')
+const path = require('path')
+const { getColorName } = require('./identifyColor')
+const { getPixelColor } = require('./utils')
+const imageToPng = require('./imageToPng')
+
+const colorIsBlack = (r, g, b) => r + g + b < 100
+
+// Function to find the second horizontal line of a single, solid color
+function findSecondSolidLine(data, width, height) {
+  let solidLineCount = 0
+  let totalSolidLines = 0
+
+  console.log('height', height)
+
+  for (let y = 0; y < height; y++) {
+    let isSolidLine = true
+    const { r: firstR, g: firstG, b: firstB } = getPixelColor(data, width, 0, y)
+
+    // Check if the entire line has the same color
+    for (let x = 1; x < width; x++) {
+      const { r, g, b } = getPixelColor(data, width, x, y)
+      if (r !== firstR || g !== firstG || b !== firstB) {
+        isSolidLine = false
+        break
+      }
+    }
+
+    if (isSolidLine) {
+      totalSolidLines++
+      const isBlack = colorIsBlack(firstR, firstG, firstB)
+
+      console.log('Line', y, 'RGB is', firstR, firstG, firstB, 'Black:', isBlack)
+    }
+
+    // If the line is solid and matches the color `-`, count it
+    if (isSolidLine && getColorName(firstR, firstG, firstB) === '-') {
+      solidLineCount++
+      if (solidLineCount === 2) {
+        return y // Return the Y-coordinate of the second solid line
+      }
+    }
+  }
+  console.log('Total solid lines:', totalSolidLines)
+
+  return -1 // Return -1 if no second solid line is found
+}
+
+// Function to find the second group of lines that are not black
+function findSecondNonBlackGroup(data, width, height) {
+  let groupCount = 0
+  let inNonBlackGroup = false
+
+  for (let y = 0; y < height; y++) {
+    let isSolidLine = true
+    let isLineBlack = true
+
+    // Check if the entire line is solid and determine if it is black
+    const { r: firstR, g: firstG, b: firstB } = getPixelColor(data, width, 0, y)
+    for (let x = 1; x < width; x++) {
+      const { r, g, b } = getPixelColor(data, width, x, y)
+      if (r !== firstR || g !== firstG || b !== firstB) {
+        isSolidLine = false
+        break
+      }
+    }
+
+    if (isSolidLine) {
+      isLineBlack = colorIsBlack(firstR, firstG, firstB)
+    } else {
+      isLineBlack = false // If the line is not solid, it cannot be black
+    }
+
+    if (!isLineBlack && isSolidLine) {
+      // Start of a new non-black group
+      if (!inNonBlackGroup) {
+        inNonBlackGroup = true
+        groupCount++
+      }
+
+      // If this is the second non-black group, return the Y-coordinate of the last line in the group
+      if (groupCount === 2) {
+        let groupEndY = y
+
+        // Continue until the group ends (i.e., lines become black again)
+        while (groupEndY < height) {
+          let isGroupLineBlack = true
+          let isGroupLineSolid = true
+
+          const {
+            r: groupFirstR,
+            g: groupFirstG,
+            b: groupFirstB,
+          } = getPixelColor(data, width, 0, groupEndY)
+          for (let x = 1; x < width; x++) {
+            const { r, g, b } = getPixelColor(data, width, x, groupEndY)
+            if (r !== groupFirstR || g !== groupFirstG || b !== groupFirstB) {
+              isGroupLineSolid = false
+              break
+            }
+          }
+
+          if (isGroupLineSolid) {
+            isGroupLineBlack = colorIsBlack(groupFirstR, groupFirstG, groupFirstB)
+          } else {
+            isGroupLineBlack = false // If the line is not solid, it cannot be black
+          }
+
+          if (isGroupLineBlack) break
+          groupEndY++
+        }
+
+        return groupEndY // Return the Y-coordinate of the last line in the second group
+      }
+    } else {
+      // End of a non-black group
+      inNonBlackGroup = false
+    }
+  }
+
+  return -1 // Return -1 if no second non-black group is found
+}
+
+// Function to crop the image below the specified line
+function cropBelowLine(buffer, lineY) {
+  return new Promise((resolve, reject) => {
+    new PNG().parse(buffer, (err, png) => {
+      if (err) return reject(err)
+
+      const { width, height, data } = png
+
+      if (lineY < 0 || lineY >= height) {
+        return reject(new Error('Invalid lineY for cropping.'))
+      }
+
+      const croppedHeight = height - lineY - 1
+      const croppedWidth = width - 5 // Remove the first 5 pixels from the left
+      const cropped = new PNG({ width: croppedWidth, height: croppedHeight })
+
+
+      for (let y = 0; y < croppedHeight; y++) {
+        for (let x = 0; x < croppedWidth; x++) {
+          const sourceIdx = ((lineY + 1 + y) * width + (x + 5)) * 4 // Start at x = 5
+          const destIdx = (y * croppedWidth + x) * 4
+
+          cropped.data[destIdx] = data[sourceIdx]
+          cropped.data[destIdx + 1] = data[sourceIdx + 1]
+          cropped.data[destIdx + 2] = data[sourceIdx + 2]
+          cropped.data[destIdx + 3] = data[sourceIdx + 3]
+        }
+      }
+
+      const outputBuffer = PNG.sync.write(cropped)
+      resolve(outputBuffer)
+    })
+  })
+}
+
+// Pre-process the image to crop below the second non-black group
+async function preprocessImage(buffer) {
+  // ensure format is PNG
+  buffer = await imageToPng(buffer)
+
+  try {
+    const png = PNG.sync.read(buffer)
+    const { width, height, data } = png
+
+    // Find the second non-black group
+    const secondGroupEndY = findSecondNonBlackGroup(data, width, height)
+    if (secondGroupEndY === -1) {
+      throw new Error('Second non-black group not found.')
+    }
+
+    console.log(`Second non-black group ends at Y = ${secondGroupEndY}`)
+
+    // Crop the image below the second non-black group
+    const croppedBuffer = await cropBelowLine(buffer, secondGroupEndY + 5)
+
+    return croppedBuffer
+  } catch (error) {
+    console.error('Error during pre-processing:', error)
+  }
+}
+
+// Example usage
+const testPreprocessing = async () => {
+  const inputFilePath = path.join(__dirname, 'data', 'new_test.jpeg')
+  const outputFilePath = path.join(__dirname, 'data', 'preprocessed_test_5.png')
+
+  let buffer = fs.readFileSync(inputFilePath)
+
+  // jpeg to png
+  buffer = await imageToPng(buffer)
+
+  await preprocessImage(buffer)
+}
+
+if (require.main === module) {
+  testPreprocessing()
+}
+
+module.exports = preprocessImage

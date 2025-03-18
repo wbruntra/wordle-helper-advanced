@@ -222,37 +222,35 @@ function DisplayStatus({
           const currentGuesses = guesses.slice(0, i + 1)
           const filtered = applyGuesses(startingList, currentGuesses)
           return (
-            <>
+            <div
+              className="guess selectable-guess mb-3 d-flex flex-row justify-content-center"
+              key={`guess-${i}`}
+            >
+              <div style={{ width: '38px', fontSize: '.6em' }} className="remaining-words">
+                {filtered.length}
+              </div>
               <div
-                className="guess selectable-guess mb-3 d-flex flex-row justify-content-center"
-                key={`guess-${i}`}
+                className="d-inline"
+                onClick={() => {
+                  createBinsForGuess(guess.word, guesses)
+                  setClickedGuess(guess.word)
+                }}
               >
-                <div style={{ width: '38px', fontSize: '.6em' }} className="remaining-words">
-                  {filtered.length}
-                </div>
-                <div
-                  className="d-inline"
+                <Guess guess={guess} />
+              </div>
+              <div className="ms-1">
+                <span
+                  className="delete"
                   onClick={() => {
-                    createBinsForGuess(guess.word, guesses)
-                    setClickedGuess(guess.word)
+                    setError('')
+                    removeGuess(i)
+                    setGuesses(removeIdx(guesses, i))
                   }}
                 >
-                  <Guess guess={guess} />
-                </div>
-                <div className="ms-1">
-                  <span
-                    className="delete"
-                    onClick={() => {
-                      setError('')
-                      removeGuess(i)
-                      setGuesses(removeIdx(guesses, i))
-                    }}
-                  >
-                    x
-                  </span>
-                </div>
+                  x
+                </span>
               </div>
-            </>
+            </div>
           )
         })}
       </div>

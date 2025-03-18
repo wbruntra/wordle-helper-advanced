@@ -1,18 +1,27 @@
 const path = require('path')
 const fs = require('fs')
 const { Jimp, intToRGBA } = require('jimp')
+const { colorIsBlack, getColorDifference } = require('./utils')
 
 const getColorName = (r, g, b) => {
   const knownColors = [
     { name: 'G', r: 83, g: 141, b: 78, a: 1 },
-    { name: 'black', r: 18, g: 18, b: 19, a: 1 },
+    // { name: 'black', r: 18, g: 18, b: 19, a: 1 },
     { name: '-', r: 58, g: 58, b: 60, a: 1 },
     { name: 'Y', r: 181, g: 159, b: 59, a: 1 },
     { name: 'white', r: 255, g: 255, b: 255, a: 1 },
   ]
 
+  if (colorIsBlack(r, g, b)) {
+    return 'black'
+  }
+
+  const tolerance = 36
+
   for (const color of knownColors) {
-    if (r === color.r && g === color.g && b === color.b) {
+    const totalDifference = getColorDifference(color, { r, g, b })
+
+    if (totalDifference < tolerance) {
       return color.name
     }
   }

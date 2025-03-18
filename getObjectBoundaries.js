@@ -1,6 +1,8 @@
 const PNG = require('pngjs').PNG
 const { getColorName } = require('./identifyColor')
 const imageToPng = require('./imageToPng')
+const preprocessImage = require('./preprocessImage')
+const { colorIsBlack, getColorDifference } = require('./utils')
 
 // Constants and Utilities
 const COLORS = {
@@ -8,10 +10,12 @@ const COLORS = {
   WHITE: { r: 255, g: 255, b: 255, a: 1 },
 }
 
-const generateColorMatcher = (refColor) => (r, g, b, a) =>
-  r === refColor.r && g === refColor.g && b === refColor.b && a === refColor.a
+const generateColorMatcher = (refColor) => (r, g, b) => {
+  const tolerance = 30
+  return getColorDifference(refColor, { r, g, b }) < tolerance
+}
 
-const isBackgroundColor = generateColorMatcher(COLORS.BLACK)
+// const isBackgroundColor = generateColorMatcher(COLORS.BLACK)
 
 // Image Processing Helpers
 function getPixelColor(data, width, x, y) {
@@ -28,9 +32,18 @@ function findHorizontalBoundaries(data, width, y, height) {
   let left = -1
   let right = -1
 
+  // Get the color of the first pixel on the line as the background color
+  const { r: bgR, g: bgG, b: bgB, a: bgA } = getPixelColor(data, width, 0, y)
+
+  const backgroundColor = { r: bgR, g: bgG, b: bgB }
+
+  const isBackgroundColor = generateColorMatcher(backgroundColor)
+
+  // console.log('Reference background color:', backgroundColor)
+
   for (let x = 0; x < width; x++) {
     const { r, g, b, a } = getPixelColor(data, width, x, y)
-    if (!isBackgroundColor(r, g, b, a)) {
+    if (!isBackgroundColor(r, g, b)) {
       left = x
       break
     }
@@ -38,53 +51,64 @@ function findHorizontalBoundaries(data, width, y, height) {
 
   for (let x = width - 1; x >= 0; x--) {
     const { r, g, b, a } = getPixelColor(data, width, x, y)
-    if (!isBackgroundColor(r, g, b, a)) {
+    if (!isBackgroundColor(r, g, b)) {
       right = x
       break
     }
   }
 
-  return { left, right }
+  return { left, right, backgroundColor }
 }
 
-function findTopBoundary(data, width, leftBoundary, startY) {
+function findTopBoundary(data, width, leftBoundary, startY, backgroundColor) {
+  const isBackgroundColor = generateColorMatcher(backgroundColor)
+
   for (let y = startY; y >= 0; y--) {
-    const { r, g, b, a } = getPixelColor(data, width, leftBoundary, y)
-    if (isBackgroundColor(r, g, b, a)) return y + 1
+    const { r, g, b } = getPixelColor(data, width, leftBoundary, y)
+    if (isBackgroundColor(r, g, b)) return y + 1
   }
   return 0
 }
 
 function findSquareWidth(data, width, leftBoundary, topBoundary) {
-  let startBlack = -1
-  let endBlack = -1
+  // Get the reference color from pixel at (6,6) relative to the boundaries
+  const refX = leftBoundary + 6
+  const refY = topBoundary + 6
+  const { r: refR, g: refG, b: refB } = getPixelColor(data, width, refX, refY)
+  const referenceColor = { r: refR, g: refG, b: refB }
+
+  // Create a matcher for the reference color
+  const isReferenceColor = generateColorMatcher(referenceColor)
+
+  // Scan from left to right starting at leftBoundary to find the first non-matching color
+  let squareEnd = -1
 
   for (let x = leftBoundary; x < width; x++) {
-    const { r, g, b, a } = getPixelColor(data, width, x, topBoundary)
-    if (isBackgroundColor(r, g, b, a)) {
-      startBlack = x
+    const { r, g, b } = getPixelColor(data, width, x, topBoundary)
+    if (!isReferenceColor(r, g, b)) {
+      squareEnd = x
       break
     }
   }
 
-  if (startBlack === -1) return -1
-
-  for (let x = startBlack + 1; x < width; x++) {
-    const { r, g, b, a } = getPixelColor(data, width, x, topBoundary)
-    if (!isBackgroundColor(r, g, b, a)) {
-      endBlack = x
-      break
-    }
+  // If no end is found, return -1 (square extends to image edge)
+  if (squareEnd === -1) {
+    console.log('No square end found - matches reference color to edge')
+    return -1
   }
 
-  return endBlack === -1 ? -1 : startBlack - leftBoundary
+  // Calculate square width (distance from leftBoundary to first non-matching color)
+  const squareWidth = squareEnd - leftBoundary
+  console.log(`Calculated square width: ${squareWidth}px`)
+
+  return squareWidth
 }
 
 function calculateGridDimensions(objectWidth, objectHeight, squareWidth) {
   const numSquares = 5
   const numRows = 6
   const totalHorizontalBorderWidth = objectWidth - numSquares * squareWidth
-  const singleBorderWidth = Math.round(totalHorizontalBorderWidth / (numSquares - 1))
+  const singleBorderWidth = Math.floor(totalHorizontalBorderWidth / (numSquares - 1))
   const totalVerticalBorderWidth = objectHeight - numRows * squareWidth
   const singleVerticalBorderWidth = Math.round(totalVerticalBorderWidth / (numRows - 1))
 
@@ -110,7 +134,9 @@ function identifySquareColors(
   const offsetX = 6
   const offsetY = 6
   const numRows = 6
-  const rowHeight = Math.round((height - topBoundary - (numRows - 1) * borderWidth) / numRows)
+  const rowHeight = squareWidth + borderWidth
+
+  // Math.round((height - topBoundary - (numRows - 1) * borderWidth) / numRows)
 
   for (let row = 0; row < numRows; row++) {
     const rowColors = []
@@ -170,11 +196,12 @@ function cropImage(data, width, height, leftBoundary, topBoundary, objectWidth, 
       cropped.data[destIdx + 3] = data[sourceIdx + 3]
     }
   }
-  return PNG.sync.write(cropped)
+  const croppedBuffer = PNG.sync.write(cropped)
+  return croppedBuffer
 }
 
 // Main Function
-function findObjectBoundaries(buffer) {
+function getGuessKeys(buffer) {
   return new Promise((resolve, reject) => {
     new PNG().parse(buffer, (err, png) => {
       if (err) return reject(err)
@@ -183,44 +210,15 @@ function findObjectBoundaries(buffer) {
       const yStep = 25
 
       for (let y = 0; y < height; y += yStep) {
-        const { left, right } = findHorizontalBoundaries(data, width, y, height)
+        const { left, right, backgroundColor } = findHorizontalBoundaries(data, width, y, height)
         if (left === -1 || right === -1) continue
 
         const objectWidth = right - left + 1
-        const topBoundary = findTopBoundary(data, width, left, y)
+        const topBoundary = findTopBoundary(data, width, left, y, backgroundColor)
         const objectHeight = height - topBoundary
-        const squareWidth = findSquareWidth(data, width, left, topBoundary)
 
-        const result = {
-          boundaries: { y, leftBoundary: left, rightBoundary: right, topBoundary },
-          object: { width: objectWidth, height: objectHeight },
-          squareWidth,
-        }
-
-        if (squareWidth !== -1) {
-          const grid = calculateGridDimensions(objectWidth, objectHeight, squareWidth)
-          result.border = {
-            totalBorderWidth: grid.totalHorizontalBorderWidth,
-            singleBorderWidth: grid.singleBorderWidth,
-          }
-
-          const squareColors = identifySquareColors(
-            data,
-            width,
-            height,
-            left,
-            topBoundary,
-            squareWidth,
-            grid.singleBorderWidth,
-          )
-          result.squareColors = squareColors
-          result.rowStrings = generateRowStrings(squareColors)
-        } else {
-          result.squareColors = null
-          result.rowStrings = null
-        }
-
-        result.croppedBuffer = cropImage(
+        // Crop the image first
+        const croppedBuffer = cropImage(
           data,
           width,
           height,
@@ -229,7 +227,53 @@ function findObjectBoundaries(buffer) {
           objectWidth,
           objectHeight,
         )
-        return resolve(result)
+
+        // Parse the cropped buffer to work with the cropped data
+        new PNG().parse(croppedBuffer, (cropErr, croppedPng) => {
+          if (cropErr) return reject(cropErr)
+
+          const { width: croppedWidth, height: croppedHeight, data: croppedData } = croppedPng
+
+          // Now use cropped data for square detection
+          const squareWidth = findSquareWidth(croppedData, croppedWidth, 0, 0, backgroundColor)
+
+          const result = {
+            boundaries: { y, leftBoundary: left, rightBoundary: right, topBoundary },
+            object: { width: objectWidth, height: objectHeight },
+            squareWidth,
+            croppedBuffer, // Include the cropped buffer in the result
+          }
+
+          if (squareWidth !== -1) {
+            const grid = calculateGridDimensions(croppedWidth, croppedHeight, squareWidth)
+            result.border = {
+              totalBorderWidth: grid.totalHorizontalBorderWidth,
+              singleBorderWidth: grid.singleBorderWidth,
+            }
+
+            console.log('Square width is', squareWidth)
+            console.log('Single border width is', grid.singleBorderWidth)
+
+            // Use cropped dimensions and data for square color identification
+            const squareColors = identifySquareColors(
+              croppedData,
+              croppedWidth,
+              croppedHeight,
+              0, // Left boundary is now 0 in cropped image
+              0, // Top boundary is now 0 in cropped image
+              squareWidth,
+              grid.singleBorderWidth,
+            )
+            result.squareColors = squareColors
+            result.rowStrings = generateRowStrings(squareColors)
+          } else {
+            result.squareColors = null
+            result.rowStrings = null
+          }
+
+          return resolve(result)
+        })
+        return // Exit after first valid boundary detection
       }
 
       resolve(null) // No boundaries found
@@ -240,7 +284,7 @@ function findObjectBoundaries(buffer) {
 // Example Usage
 const run = async (buffer) => {
   try {
-    const result = await findObjectBoundaries(buffer)
+    const result = await getGuessKeys(buffer)
     if (result) {
       console.log(`Found boundaries at y = ${result.boundaries.y}px:`)
       console.log(`Left boundary: ${result.boundaries.leftBoundary}px`)
@@ -266,7 +310,6 @@ const run = async (buffer) => {
       } else {
         console.log('Could not determine square width.')
       }
-      console.log('Cropped image buffer generated.')
     } else {
       console.log('No object boundaries found in the image.')
     }
@@ -281,14 +324,18 @@ const run = async (buffer) => {
 const testWithFile = async () => {
   const fs = require('fs')
   const path = require('path')
-  const filepath = path.join(__dirname, 'data', 'test.png')
-  const buffer = fs.readFileSync(filepath)
-  const result = await run(buffer)
-  console.log(result)
+  const filepath = path.join(__dirname, 'data', 'new_test.jpeg')
+
+  let buffer = fs.readFileSync(filepath)
+  buffer = await preprocessImage(buffer)
+
+  const result = await getGuessKeys(buffer)
+
+  console.log(result.rowStrings)
 }
 
 if (require.main === module) {
   testWithFile()
 }
 
-module.exports = { findObjectBoundaries }
+module.exports = { getGuessKeys }

@@ -15,6 +15,60 @@ const sampleResponse = [
   },
 ]
 
+const getWordsGuessed = async (image_buffer) => {
+  console.log('Getting words from ChatGPT...')
+
+  const wordsExample = ['CAGEY', 'STOMP', 'WATER']
+
+  const instructions = `The important part of the image contains a prominent display of up to six rows of 5-letter words. Each square has a specific background color. Your task is to identify the word in each row. Your response should be in this format: ${JSON.stringify(
+    wordsExample,
+  )}.`
+
+  const base64Image = image_buffer.toString('base64')
+
+  const response = await openai.responses.create({
+    model: 'gpt-4o-mini',
+    input: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'input_text',
+            text: instructions,
+          },
+          {
+            type: 'input_image',
+            image_url: `data:image/jpeg;base64,${base64Image}`,
+          },
+        ],
+      },
+    ],
+    text: {
+      format: {
+        type: 'json_schema',
+        name: 'guess_response',
+        schema: {
+          type: 'object',
+          properties: {
+            words: {
+              type: 'array',
+              items: {
+                type: 'string',
+              },
+            },
+          },
+          required: ['words'],
+          additionalProperties: false,
+        },
+      },
+    },
+  })
+
+  let output_text = response.output_text
+
+  return JSON.parse(output_text).words
+}
+
 const getResponse = async (image_url) => {
   console.log('Getting response...')
 
@@ -82,6 +136,14 @@ The response should correspond to this format ${JSON.stringify(
   })
 }
 
+const test = async () => {
+  const test_image = 'https://test-projects.us-east-1.linodeobjects.com/new_test.jpeg'
+
+  const words = await getWordsGuessed(test_image)
+
+  console.log(words)
+}
+
 const getGuessesFromImage = async (image_url) => {
   const response = await getResponse(image_url)
 
@@ -101,4 +163,10 @@ const getGuessesFromImage = async (image_url) => {
   return output.data
 }
 
-module.exports = getGuessesFromImage
+if (require.main === module) {
+  test().then(() => {
+    process.exit(0)
+  })
+}
+
+module.exports = { getGuessesFromImage, getWordsGuessed }

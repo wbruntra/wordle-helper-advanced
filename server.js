@@ -7,7 +7,8 @@ const _ = require('lodash')
 const path = require('path')
 const getPresignedURL = require('./getPresignedURL')
 const secrets = require('./secrets')
-const getGuessesFromImage = require('./getGuessesFromImage')
+// const getGuessesFromImage = require('./getGuessesFromImage')
+const { getGuesses } = require('./getGuesses')
 
 require('dotenv').config()
 
@@ -55,7 +56,7 @@ app.post('/api/get-presigned-url', async (req, res) => {
 app.post('/api/interpret-guesses', async (req, res) => {
   const { fileUrl } = req.body
 
-  const guesses = await getGuessesFromImage(fileUrl)
+  const guesses = await getGuesses(fileUrl)
 
   res.send({ guesses })
 })
