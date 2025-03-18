@@ -2,50 +2,8 @@ const PNG = require('pngjs').PNG
 const fs = require('fs')
 const path = require('path')
 const { getColorName } = require('./identifyColor')
-const { getPixelColor } = require('./utils')
+const { getPixelColor, isColorMatch, colorIsBlack } = require('./utils')
 const imageToPng = require('./imageToPng')
-
-const colorIsBlack = (r, g, b) => r + g + b < 100
-
-// Function to find the second horizontal line of a single, solid color
-function findSecondSolidLine(data, width, height) {
-  let solidLineCount = 0
-  let totalSolidLines = 0
-
-  console.log('height', height)
-
-  for (let y = 0; y < height; y++) {
-    let isSolidLine = true
-    const { r: firstR, g: firstG, b: firstB } = getPixelColor(data, width, 0, y)
-
-    // Check if the entire line has the same color
-    for (let x = 1; x < width; x++) {
-      const { r, g, b } = getPixelColor(data, width, x, y)
-      if (r !== firstR || g !== firstG || b !== firstB) {
-        isSolidLine = false
-        break
-      }
-    }
-
-    if (isSolidLine) {
-      totalSolidLines++
-      const isBlack = colorIsBlack(firstR, firstG, firstB)
-
-      console.log('Line', y, 'RGB is', firstR, firstG, firstB, 'Black:', isBlack)
-    }
-
-    // If the line is solid and matches the color `-`, count it
-    if (isSolidLine && getColorName(firstR, firstG, firstB) === '-') {
-      solidLineCount++
-      if (solidLineCount === 2) {
-        return y // Return the Y-coordinate of the second solid line
-      }
-    }
-  }
-  console.log('Total solid lines:', totalSolidLines)
-
-  return -1 // Return -1 if no second solid line is found
-}
 
 // Function to find the second group of lines that are not black
 function findSecondNonBlackGroup(data, width, height) {
@@ -58,9 +16,11 @@ function findSecondNonBlackGroup(data, width, height) {
 
     // Check if the entire line is solid and determine if it is black
     const { r: firstR, g: firstG, b: firstB } = getPixelColor(data, width, 0, y)
-    for (let x = 1; x < width; x++) {
+    const skipFirstPixels = 6
+
+    for (let x = skipFirstPixels; x < width - skipFirstPixels; x++) {
       const { r, g, b } = getPixelColor(data, width, x, y)
-      if (r !== firstR || g !== firstG || b !== firstB) {
+      if (!isColorMatch({ r: firstR, g: firstG, b: firstB }, r, g, b, 18)) {
         isSolidLine = false
         break
       }
@@ -138,7 +98,6 @@ function cropBelowLine(buffer, lineY) {
       const croppedWidth = width - 5 // Remove the first 5 pixels from the left
       const cropped = new PNG({ width: croppedWidth, height: croppedHeight })
 
-
       for (let y = 0; y < croppedHeight; y++) {
         for (let x = 0; x < croppedWidth; x++) {
           const sourceIdx = ((lineY + 1 + y) * width + (x + 5)) * 4 // Start at x = 5
@@ -185,8 +144,7 @@ async function preprocessImage(buffer) {
 
 // Example usage
 const testPreprocessing = async () => {
-  const inputFilePath = path.join(__dirname, 'data', 'new_test.jpeg')
-  const outputFilePath = path.join(__dirname, 'data', 'preprocessed_test_5.png')
+  const inputFilePath = path.join(__dirname, 'data', 'wordle_2.jpg')
 
   let buffer = fs.readFileSync(inputFilePath)
 

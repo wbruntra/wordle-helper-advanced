@@ -9,7 +9,7 @@ function getPixelColor(data, width, x, y) {
   }
 }
 
-const colorIsBlack = (r, g, b) => r + g + b < 100
+const colorIsBlack = (r, g, b) => r + g + b < 90
 
 const getColorDifference = (color1, color2) => {
   const totalDifference =
@@ -18,8 +18,15 @@ const getColorDifference = (color1, color2) => {
   return totalDifference
 }
 
+const isColorMatch = (refColor, r, g, b, tolerance = 12) => {
+  const totalDifference =
+    Math.abs(refColor.r - r) + Math.abs(refColor.g - g) + Math.abs(refColor.b - b)
+  return totalDifference < tolerance
+}
+
 module.exports = {
   getPixelColor,
   colorIsBlack,
   getColorDifference,
+  isColorMatch,
 }
