@@ -73,7 +73,4 @@ app.use(function (err, req, res, next) {
   res.send('error!')
 })
 
-// Start server
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`)
-})
+module.exports = app
