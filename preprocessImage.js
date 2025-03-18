@@ -151,7 +151,11 @@ const testPreprocessing = async () => {
   // jpeg to png
   buffer = await imageToPng(buffer)
 
-  await preprocessImage(buffer)
+  const result = await preprocessImage(buffer)
+
+  const outputFilePath = path.join(__dirname, 'data', 'wordle_2_processed.png')
+  fs.writeFileSync(outputFilePath, result)
+  console.log(`Processed image saved to ${outputFilePath}`)
 }
 
 if (require.main === module) {

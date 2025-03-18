@@ -33,7 +33,7 @@ function findHorizontalBoundaries(data, width, y, height) {
   let right = -1
 
   // Get the color of the first pixel on the line as the background color
-  const { r: bgR, g: bgG, b: bgB, a: bgA } = getPixelColor(data, width, 0, y)
+  const { r: bgR, g: bgG, b: bgB, a: bgA } = getPixelColor(data, width, 4, y)
 
   const backgroundColor = { r: bgR, g: bgG, b: bgB }
 
@@ -209,7 +209,7 @@ function getGuessKeys(buffer) {
       const { width, height, data } = png
       const yStep = 25
 
-      for (let y = 0; y < height; y += yStep) {
+      for (let y = 5; y < height; y += yStep) {
         const { left, right, backgroundColor } = findHorizontalBoundaries(data, width, y, height)
         if (left === -1 || right === -1) continue
 
@@ -231,6 +231,9 @@ function getGuessKeys(buffer) {
         // Parse the cropped buffer to work with the cropped data
         new PNG().parse(croppedBuffer, (cropErr, croppedPng) => {
           if (cropErr) return reject(cropErr)
+
+          console.log('Cropped width is', croppedPng.width)
+          console.log('Cropped height is', croppedPng.height)
 
           const { width: croppedWidth, height: croppedHeight, data: croppedData } = croppedPng
 
@@ -324,14 +327,25 @@ const run = async (buffer) => {
 const testWithFile = async () => {
   const fs = require('fs')
   const path = require('path')
-  const filepath = path.join(__dirname, 'data', 'new_test.jpeg')
+  const filepath = path.join(__dirname, 'data', 'wordle_2.jpg')
 
   let buffer = fs.readFileSync(filepath)
   buffer = await preprocessImage(buffer)
 
+  // save the preprocessed image for debug purposes
+
+  const preprocessedFilePath = path.join(__dirname, 'data', 'wordle_2_preprocessed.png')
+  // fs.writeFileSync(preprocessedFilePath, buffer)
+
   const result = await getGuessKeys(buffer)
 
-  console.log(result.rowStrings)
+  console.log(result)
+
+  // save the new cropping for debug purposes
+
+  const outputFilePath = path.join(__dirname, 'data', 'wordle_2_processed.png')
+  fs.writeFileSync(outputFilePath, result.croppedBuffer)
+  console.log(`Processed image saved to ${outputFilePath}`)
 }
 
 if (require.main === module) {
