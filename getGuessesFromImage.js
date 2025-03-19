@@ -3,6 +3,8 @@ const secrets = require('./secrets.js')
 const openai = new OpenAI({
   apiKey: secrets.OPENAI_API_KEY,
 })
+const fs = require('fs')
+const path = require('path')
 
 const sampleResponse = [
   {
@@ -136,14 +138,6 @@ The response should correspond to this format ${JSON.stringify(
   })
 }
 
-const test = async () => {
-  const test_image = 'https://test-projects.us-east-1.linodeobjects.com/new_test.jpeg'
-
-  const words = await getWordsGuessed(test_image)
-
-  console.log(words)
-}
-
 const getGuessesFromImage = async (image_url) => {
   const response = await getResponse(image_url)
 
@@ -161,6 +155,16 @@ const getGuessesFromImage = async (image_url) => {
   })
 
   return output.data
+}
+
+const test = async () => {
+  // const test_image = 'https://test-projects.us-east-1.linodeobjects.com/new_test.jpeg'
+
+  const test_image = fs.readFileSync(path.join(__dirname, 'debug', 'black_and_white.png'))
+
+  const words = await getWordsGuessed(test_image)
+
+  console.log(words)
 }
 
 if (require.main === module) {

@@ -18,13 +18,11 @@ const getGuesses = async (image_url) => {
 
   const bwBuffer = convertToBlackAndWhite(guessKeys.croppedBuffer)
   // Save the black and white image for debugging
-  const debugDir = path.join(__dirname, 'debug')
-  const bwImagePath = path.join(debugDir, 'black_and_white.png')
-  fs.writeFileSync(bwImagePath, bwBuffer)
+  // const debugDir = path.join(__dirname, 'debug')
+  // const bwImagePath = path.join(debugDir, 'black_and_white.png')
+  // fs.writeFileSync(bwImagePath, bwBuffer)
 
   const words = await getWordsGuessed(bwBuffer)
-  // console.log(guessKeys)
-  // return
 
   const keys = guessKeys.rowStrings
 

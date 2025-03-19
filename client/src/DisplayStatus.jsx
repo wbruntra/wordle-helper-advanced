@@ -45,6 +45,8 @@ function DisplayStatus({
 
     if (localFiltered.length === 0) {
       setError('Something went wrong. Maybe you put in the wrong evaluation?')
+    } else {
+      setError('')
     }
 
     let newWordOrder

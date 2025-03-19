@@ -1,4 +1,4 @@
-import { miniMax, sumRoots, wordsAtOrBelowLimit } from './scorers.js'
+import { miniMax, sumRoots, wordsAtOrBelowLimit, countPossibleKeys, weightKeys } from './scorers.js'
 
 import _ from 'lodash'
 import md5 from 'md5'
