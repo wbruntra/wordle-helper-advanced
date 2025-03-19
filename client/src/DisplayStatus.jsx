@@ -1,7 +1,6 @@
-import { applyGuesses, filterWordsUsingGuessResult, getBins } from './utils'
+import { applyGuesses, filterWordsUsingGuessResult, getBins, orderEntireWordList } from './utils'
 import { useEffect, useState } from 'react'
 import _ from 'lodash'
-import { orderEntireWordList } from './scorers';
 
 import Guess from './Guess'
 import BinsTable from './BinsTable'
