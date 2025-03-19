@@ -3,6 +3,9 @@ const { getColorName } = require('./identifyColor')
 const imageToPng = require('./imageToPng')
 const preprocessImage = require('./preprocessImage')
 const { colorIsBlack, getColorDifference } = require('./utils')
+const path = require('path')
+const fs = require('fs')
+const performOCR = require('./readLetter')
 
 // Constants and Utilities
 const COLORS = {
@@ -121,7 +124,7 @@ function calculateGridDimensions(objectWidth, objectHeight, squareWidth) {
   }
 }
 
-function identifySquareColors(
+async function identifySquareColors(
   data,
   width,
   height,
@@ -134,7 +137,7 @@ function identifySquareColors(
   const offsetX = 6
   const offsetY = 6
   const numRows = 6
-  const rowHeight = squareWidth + borderWidth
+  const rowHeight = squareWidth
 
   // Math.round((height - topBoundary - (numRows - 1) * borderWidth) / numRows)
 
@@ -149,6 +152,20 @@ function identifySquareColors(
       if (sampleX >= width || sampleY >= height) {
         rowColors.push({ square: col + 1, color: 'Out of bounds', x: sampleX, y: sampleY })
         continue
+      }
+
+      // Extract the square's pixel data
+      const squareData = new PNG({ width: squareWidth, height: squareWidth })
+      for (let y = 0; y < squareWidth; y++) {
+        for (let x = 0; x < squareWidth; x++) {
+          const sourceIdx = ((sampleY + y) * width + (squareStartX + x)) * 4
+          const destIdx = (y * squareWidth + x) * 4
+
+          squareData.data[destIdx] = data[sourceIdx]
+          squareData.data[destIdx + 1] = data[sourceIdx + 1]
+          squareData.data[destIdx + 2] = data[sourceIdx + 2]
+          squareData.data[destIdx + 3] = data[sourceIdx + 3]
+        }
       }
 
       const { r, g, b } = getPixelColor(data, width, sampleX, sampleY)
@@ -201,7 +218,7 @@ function cropImage(data, width, height, leftBoundary, topBoundary, objectWidth, 
 }
 
 // Main Function
-function getGuessKeys(buffer) {
+async function getGuessKeys(buffer) {
   return new Promise((resolve, reject) => {
     new PNG().parse(buffer, (err, png) => {
       if (err) return reject(err)
@@ -229,7 +246,7 @@ function getGuessKeys(buffer) {
         )
 
         // Parse the cropped buffer to work with the cropped data
-        new PNG().parse(croppedBuffer, (cropErr, croppedPng) => {
+        new PNG().parse(croppedBuffer, async (cropErr, croppedPng) => {
           if (cropErr) return reject(cropErr)
 
           console.log('Cropped width is', croppedPng.width)
@@ -258,7 +275,7 @@ function getGuessKeys(buffer) {
             console.log('Single border width is', grid.singleBorderWidth)
 
             // Use cropped dimensions and data for square color identification
-            const squareColors = identifySquareColors(
+            const squareColors = await identifySquareColors(
               croppedData,
               croppedWidth,
               croppedHeight,
@@ -325,8 +342,6 @@ const run = async (buffer) => {
 
 // Test with File (Optional)
 const testWithFile = async () => {
-  const fs = require('fs')
-  const path = require('path')
   const filepath = path.join(__dirname, 'data', 'wordle_2.jpg')
 
   let buffer = fs.readFileSync(filepath)

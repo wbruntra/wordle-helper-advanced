@@ -2,6 +2,9 @@ const { getWordsGuessed } = require('./getGuessesFromImage')
 const { getGuessKeys } = require('./getObjectBoundaries')
 const preprocessImage = require('./preprocessImage')
 const axios = require('axios')
+const convertToBlackAndWhite = require('./convertToBW')
+const fs = require('fs')
+const path = require('path')
 
 const getGuesses = async (image_url) => {
   const response = await axios.get(image_url, {
@@ -12,7 +15,14 @@ const getGuesses = async (image_url) => {
 
   const preprocessedBuffer = await preprocessImage(buffer)
   const guessKeys = await getGuessKeys(preprocessedBuffer)
-  const words = await getWordsGuessed(guessKeys.croppedBuffer)
+
+  const bwBuffer = convertToBlackAndWhite(guessKeys.croppedBuffer)
+  // Save the black and white image for debugging
+  const debugDir = path.join(__dirname, 'debug')
+  const bwImagePath = path.join(debugDir, 'black_and_white.png')
+  fs.writeFileSync(bwImagePath, bwBuffer)
+
+  const words = await getWordsGuessed(bwBuffer)
   // console.log(guessKeys)
   // return
 
@@ -33,7 +43,8 @@ const getGuesses = async (image_url) => {
 
 const test = async () => {
   const test_image = 'https://test-projects.us-east-1.linodeobjects.com/new_test.jpeg'
-  const result = getGuesses(test_image)
+  // const test_image = 'https://test-projects.us-east-1.linodeobjects.com/wordle/sTKqQewZ.jpg'
+  const result = await getGuesses(test_image)
 
   console.log(result)
 }

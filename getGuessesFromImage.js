@@ -18,9 +18,9 @@ const sampleResponse = [
 const getWordsGuessed = async (image_buffer) => {
   console.log('Getting words from ChatGPT...')
 
-  const wordsExample = ['CAGEY', 'STOMP', 'WATER']
+  const wordsExample = { words: ['CAGEY', 'STOMP', 'WATER'] }
 
-  const instructions = `The important part of the image contains a prominent display of up to six rows of 5-letter words. Each square has a specific background color. Your task is to identify the word in each row. Your response should be in this format: ${JSON.stringify(
+  const instructions = `This image contains a prominent display of up to six rows of 5-letter words, one word on each row. Your task is to identify the word in each row. Your response should contain the words in an array, like this example: ${JSON.stringify(
     wordsExample,
   )}.`
 

@@ -1,4 +1,4 @@
-import { miniMax, sumRoots, wordsAtOrBelowLimit } from './scorers'
+import { miniMax, sumRoots, wordsAtOrBelowLimit } from './scorers.js'
 
 import _ from 'lodash'
 import md5 from 'md5'
@@ -105,9 +105,18 @@ export const evaluateToString = (guess, answer) => {
    *    const result = evaluator('some guess');
    */
   const evaluator = (guess) => {
+    const canonicalAnswer = getCanonical(answer)
+    const canonicalGuess = getCanonical(guess)
+
+    // Preliminary check: no common letters
+    const guessSet = new Set(canonicalGuess)
+    if (!canonicalAnswer.split('').some((char) => guessSet.has(char))) {
+      return '-----' // Fast return for no matches
+    }
+
     const key = Array(guess.length).fill(null)
-    const answerArray = getCanonical(answer).split('')
-    const guessArray = getCanonical(guess).split('')
+    const answerArray = canonicalAnswer.split('')
+    const guessArray = canonicalGuess.split('')
 
     // First pass: only get correct (GREEN) letters
     for (let i = 0; i < guessArray.length; i++) {
@@ -676,4 +685,77 @@ export function scoreBinDistribution(arr) {
   const score = n * 10 - stdDev
 
   return score
+}
+
+const getBestDistributionGuess = (wordList) => {
+  const result = []
+  for (const word of wordList) {
+    const bins = getBins(word, wordList)
+    const binSizes = Object.values(bins)
+    const score = scoreBinDistribution(binSizes)
+    result.push({
+      word,
+      score,
+    })
+  }
+  return _.maxBy(result, (r) => r.score)
+}
+
+export const analyzeGuess = (guess, wordList) => {
+  const bins = getBins(guess, wordList, { returnObject: true, showMatches: true })
+  // const binSizes = Object.values(bins)
+  // const score = scoreBinDistribution(binSizes)
+
+  const bestDistribution = getBestDistributionGuess(wordList)
+
+  const bestBins = getBins(bestDistribution.word, wordList, { returnObject: true })
+
+  console.log(bestDistribution.word, bestBins)
+
+  return {
+    guess,
+    bins,
+  }
+}
+
+export const orderEntireWordList = (
+  filteredList,
+  { only_filtered = false, orderByWeight = false, startingList } = {},
+) => {
+  const maximizeUniqueness = wordsAtOrBelowLimit(1)
+  if (filteredList.length === startingList.length) {
+    return []
+  }
+  let results
+
+  const scoringFunction = countPossibleKeys
+
+  results = filteredList.map((word) => {
+    const fullBins = getBins(word, filteredList, { returnObject: true })
+    const bins = Object.values(fullBins)
+    return {
+      word,
+      score: scoringFunction(bins),
+      weightedScore: weightKeys(fullBins) / (filteredList.length * 15),
+    }
+  })
+
+  const filteredOrder = _.orderBy(results, (o) => o.score, 'desc')
+  if (!(only_filtered || filteredOrder[0].score === filteredList.length)) {
+    results = startingList.map((word) => {
+      const fullBins = getBins(word, filteredList, { returnObject: true })
+      const bins = Object.values(fullBins)
+      return {
+        word,
+        score: scoringFunction(bins),
+        weightedScore: weightKeys(fullBins) / (filteredList.length * 15),
+      }
+    })
+  }
+
+  if (orderByWeight) {
+    return _.orderBy(results, (o) => o.weightedScore, 'desc')
+  }
+
+  return _.orderBy(results, (o) => o.score, 'desc')
 }

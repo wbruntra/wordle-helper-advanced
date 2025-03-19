@@ -1,119 +1,13 @@
 import { applyGuesses, filterWordsUsingGuessResult, getBins } from './utils'
 import { useEffect, useState } from 'react'
-import {
-  weightKeys,
-  wordsAtOrBelowLimit,
-  findNextGuessProbability,
-  countPossibleKeys,
-} from './scorers'
+import _ from 'lodash'
+import { orderEntireWordList } from './scorers';
 
 import Guess from './Guess'
-import _ from 'lodash'
-
-const toPct = (fraction) => {
-  return (fraction * 100).toFixed(2) + '%'
-}
+import BinsTable from './BinsTable'
 
 const removeIdx = (arr, idx) => {
   return [...arr.slice(0, idx), ...arr.slice(idx + 1)]
-}
-
-const orderEntireWordList = (
-  filteredList,
-  { only_filtered = false, orderByWeight = false, startingList } = {},
-) => {
-  const maximizeUniqueness = wordsAtOrBelowLimit(1)
-  if (filteredList.length === startingList.length) {
-    return []
-  }
-  let results
-
-  const scoringFunction = countPossibleKeys
-
-  results = filteredList.map((word) => {
-    const fullBins = getBins(word, filteredList, { returnObject: true })
-    const bins = Object.values(fullBins)
-    return {
-      word,
-      score: scoringFunction(bins),
-      weightedScore: weightKeys(fullBins) / (filteredList.length * 15),
-    }
-  })
-
-  const filteredOrder = _.orderBy(results, (o) => o.score, 'desc')
-  if (!(only_filtered || filteredOrder[0].score === filteredList.length)) {
-    results = startingList.map((word) => {
-      const fullBins = getBins(word, filteredList, { returnObject: true })
-      const bins = Object.values(fullBins)
-      return {
-        word,
-        score: scoringFunction(bins),
-        weightedScore: weightKeys(fullBins) / (filteredList.length * 15),
-      }
-    })
-  }
-
-  if (orderByWeight) {
-    return _.orderBy(results, (o) => o.weightedScore, 'desc')
-  }
-
-  return _.orderBy(results, (o) => o.score, 'desc')
-}
-
-function BinsTable({ bins }) {
-  const binSizes = bins.map((bin) => Object.values(bin)[0].length)
-  const uniqueWords = _.sum(binSizes.filter((size) => size === 1))
-  const limits = [5, 20]
-  const summaryStats = limits.map((limit) => {
-    const scorer = wordsAtOrBelowLimit(limit)
-    return {
-      limit,
-      wordCount: scorer(binSizes),
-    }
-  })
-  const totalWords = _.sum(binSizes)
-
-  return (
-    <>
-      <table className="table table-dark table-striped mt-4 w-100">
-        <thead>
-          <tr>
-            <th scope="col">KEY</th>
-            <th scope="col">WORDS</th>
-            <th scope="col"># OF MATCHES</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style={{ width: '35%' }}>Chance of unique answer</td>
-            <td>{toPct(uniqueWords / totalWords)}</td>
-            <td>{uniqueWords}</td>
-          </tr>
-          {summaryStats.map((smry, i) => (
-            <tr key={`limit-${smry.limit}`}>
-              <td>Chance of ≤ {smry.limit}</td>
-              <td>{toPct(smry.wordCount / totalWords)}</td>
-              <td>{smry.wordCount}</td>
-            </tr>
-          ))}
-          {bins.map((bin, i) => {
-            const matches = Object.values(bin)[0].length
-            return (
-              <tr key={`bin-${i}`}>
-                <td>{Object.keys(bin)[0]}</td>
-                <td>
-                  {matches < 20
-                    ? Object.values(bin)[0].join(', ')
-                    : `[${matches > 600 ? 'way ' : ''}too many to show]`}
-                </td>
-                <td>{matches}</td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </>
-  )
 }
 
 function DisplayStatus({
@@ -122,7 +16,7 @@ function DisplayStatus({
   resetGuesses,
   startingList,
   removeGuess,
-  onGuessClick, // Updated prop
+  onGuessClick,
 }) {
   const [showDepth, setShowDepth] = useState(false)
   const [usingOnlyFiltered, setUsingOnlyFiltered] = useState(true)
@@ -132,9 +26,22 @@ function DisplayStatus({
   const [bins, setBins] = useState([])
   const [binsWord, setBinsWord] = useState('')
   const [orderedWords, setOrderedWords] = useState([])
+  const [clickedGuess, setClickedGuess] = useState(null)
 
   useEffect(() => {
-    let localFiltered = applyGuesses(startingList, guesses)
+    let appliedGuesses = []
+    if (clickedGuess) {
+      for (let i = 0; i < guesses.length; i++) {
+        appliedGuesses.push(guesses[i])
+        if (guesses[i].word === clickedGuess) {
+          break
+        }
+      }
+    } else {
+      appliedGuesses = guesses
+    }
+
+    let localFiltered = applyGuesses(startingList, appliedGuesses)
     setFiltered(localFiltered)
 
     if (localFiltered.length === 0) {
@@ -151,14 +58,14 @@ function DisplayStatus({
       newWordOrder = localFiltered.map((w) => ({ word: w }))
     }
     setOrderedWords(newWordOrder)
-  }, [guesses, usingOnlyFiltered, startingList])
+  }, [guesses, usingOnlyFiltered, startingList, clickedGuess])
 
   useEffect(() => {
     if (guesses.length > 0 && showDepth) {
-      const lastGuess = guesses.slice(-1)[0]
-      createBinsForGuess(lastGuess.word)
+      const wordToAnalyze = clickedGuess || guesses[guesses.length - 1].word
+      createBinsForGuess(wordToAnalyze)
     }
-  }, [guesses, showDepth])
+  }, [guesses, showDepth, clickedGuess])
 
   const createBinsForGuess = (word) => {
     let localFiltered = startingList.slice()
@@ -192,7 +99,12 @@ function DisplayStatus({
               </div>
               <div
                 className="d-inline selectable"
-                onClick={() => onGuessClick(i)} // Trigger editing
+                onClick={() => {
+                  setClickedGuess(guess.word)
+                  if (showDepth) {
+                    createBinsForGuess(guess.word)
+                  }
+                }}
               >
                 <Guess guess={guess} />
               </div>
@@ -203,9 +115,15 @@ function DisplayStatus({
                     setError('')
                     removeGuess(i)
                     setGuesses(removeIdx(guesses, i))
+                    if (clickedGuess === guess.word) {
+                      setClickedGuess(null)
+                    }
                   }}
                 >
                   x
+                </span>
+                <span className="edit selectable ms-2" onClick={() => onGuessClick(i)}>
+                  ✎
                 </span>
               </div>
             </div>
@@ -228,7 +146,8 @@ function DisplayStatus({
             <p>
               There {currentFilteredList.length === 1 ? 'is ' : 'are'}
               <span className="mx-2 fw-bold">{currentFilteredList.length}</span>word
-              {currentFilteredList.length === 1 ? '' : 's'} left
+              {currentFilteredList.length === 1 ? '' : 's'} left{' '}
+              {clickedGuess && `after guessing ${clickedGuess}`}
             </p>
             <button onClick={() => setCountOnly(!countOnly)} className="btn btn-dark mb-3">
               {countOnly ? 'Show Suggestions' : 'Show Word Count Only'}
@@ -300,10 +219,11 @@ function DisplayStatus({
               className="btn btn-dark"
               onClick={() => {
                 setShowDepth(true)
-                createBinsForGuess(guesses[guesses.length - 1].word)
+                const wordToAnalyze = clickedGuess || guesses[guesses.length - 1].word
+                createBinsForGuess(wordToAnalyze)
               }}
             >
-              Show Analysis for Last Guess
+              Show Analysis
             </button>
           )}
           {showDepth && (

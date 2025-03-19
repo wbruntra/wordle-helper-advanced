@@ -6,6 +6,7 @@ secrets.js
 
 # testing
 /coverage
+/debug
 
 # misc
 .DS_Store
