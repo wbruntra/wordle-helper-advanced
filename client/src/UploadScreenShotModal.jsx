@@ -79,6 +79,13 @@ function UploadScreenShotModal({ show, handleClose, setGuesses }) {
       </Modal.Body>
 
       <Modal.Footer>
+        <Button
+          onClick={() => interpretScreenshot(fileUrl)}
+          variant="primary"
+          disabled={!fileUrl || isLoading}
+        >
+          Process Screenshot
+        </Button>
         <Button onClick={handleClose} variant="secondary" disabled={isLoading}>
           Close
         </Button>
