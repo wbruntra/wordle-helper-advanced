@@ -1,6 +1,8 @@
 import { applyGuesses, filterWordsUsingGuessResult, getBins, orderEntireWordList } from './utils'
 import { useEffect, useState } from 'react'
 import _ from 'lodash'
+import { BsPencil } from 'react-icons/bs'
+import { TiTimes } from 'react-icons/ti'
 
 import Guess from './Guess'
 import BinsTable from './BinsTable'
@@ -92,14 +94,17 @@ function DisplayStatus({
           const filtered = applyGuesses(startingList, currentGuesses)
           return (
             <div
-              className="guess selectable-guess mb-3 d-flex flex-row justify-content-center align-items-center"
+              className="guess selectable-guess mb-3 row justify-content-center"
               key={`guess-${i}`}
             >
-              <div style={{ width: '38px', fontSize: '.6em' }} className="remaining-words">
+              <div
+                style={{ fontSize: '.6em' }}
+                className="col-2 remaining-words d-flex justify-content-end align-items-center"
+              >
                 {filtered.length}
               </div>
               <div
-                className="d-inline selectable"
+                className="selectable col-8 col-md-6 d-flex align-items-center justify-content-center"
                 onClick={() => {
                   setClickedGuess(guess.word)
                   if (showDepth) {
@@ -109,8 +114,8 @@ function DisplayStatus({
               >
                 <Guess guess={guess} />
               </div>
-              <div className="ms-1">
-                <span
+              <div className="col-2 d-flex flex-row align-items-center justify-content-center">
+                <div
                   className="delete selectable"
                   onClick={() => {
                     setError('')
@@ -121,11 +126,11 @@ function DisplayStatus({
                     }
                   }}
                 >
-                  x
-                </span>
-                <span className="edit selectable ms-2" onClick={() => onGuessClick(i)}>
-                  ✎
-                </span>
+                  <TiTimes />
+                </div>
+                <div className="edit selectable ms-2" onClick={() => onGuessClick(i)}>
+                  <BsPencil />
+                </div>
               </div>
             </div>
           )

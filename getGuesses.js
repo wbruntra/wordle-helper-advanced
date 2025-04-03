@@ -6,21 +6,10 @@ const convertToBlackAndWhite = require('./convertToBW')
 const fs = require('fs')
 const path = require('path')
 
-const getGuesses = async (image_url) => {
-  const response = await axios.get(image_url, {
-    responseType: 'arraybuffer',
-  })
-
-  const buffer = Buffer.from(response.data, 'binary')
-
+const getGuessesFromBuffer = async (buffer) => {
   const preprocessedBuffer = await preprocessImage(buffer)
   const guessKeys = await getGuessKeys(preprocessedBuffer)
-
   const bwBuffer = convertToBlackAndWhite(guessKeys.croppedBuffer)
-  // Save the black and white image for debugging
-  // const debugDir = path.join(__dirname, 'debug')
-  // const bwImagePath = path.join(debugDir, 'black_and_white.png')
-  // fs.writeFileSync(bwImagePath, bwBuffer)
 
   const words = await getWordsGuessed(bwBuffer)
 
@@ -39,8 +28,27 @@ const getGuesses = async (image_url) => {
   return result
 }
 
+const getGuesses = async (image_url) => {
+  const response = await axios.get(image_url, {
+    responseType: 'arraybuffer',
+  })
+
+  const buffer = Buffer.from(response.data, 'binary')
+
+  const result = await getGuessesFromBuffer(buffer)
+
+  return result
+}
+
 const test = async () => {
   const test_image = 'https://test-projects.us-east-1.linodeobjects.com/new_test.jpeg'
+
+  // const inputFilePath = path.join(__dirname, 'data', 'ios_test.png')
+  // let buffer = fs.readFileSync(inputFilePath)
+
+  // const result = await getGuessesFromBuffer(buffer)
+
+
   // const test_image = 'https://test-projects.us-east-1.linodeobjects.com/wordle/sTKqQewZ.jpg'
   const result = await getGuesses(test_image)
 

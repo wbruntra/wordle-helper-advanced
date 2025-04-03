@@ -18,7 +18,7 @@ export default function Guess({ guess }) {
     <>
       {key.map((c, i) => {
         return (
-          <div key={`letter-${i}`} className={`${getClasses(c)}`}>
+          <div key={`letter-${i}`} className={`px-2 mx-1 ${getClasses(c)}`}>
             {guess.word[i]}
           </div>
         )

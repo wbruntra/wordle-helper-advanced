@@ -1,16 +1,106 @@
 const PNG = require('pngjs').PNG
 const fs = require('fs')
 const path = require('path')
-const { getColorName } = require('./identifyColor')
 const { getPixelColor, isColorMatch, colorIsBlack } = require('./utils')
 const imageToPng = require('./imageToPng')
+const sharp = require('sharp')
+
+// Function to find the end of the second non-black group, or the first if only one exists
+function findKeyNonBlackGroup(data, width, height) {
+  let groupCount = 0
+  let inNonBlackGroup = false
+  let firstGroupEndY = -1 // Track the end of the first group
+  let secondGroupEndY = -1 // Track the end of the second group
+
+  const heightLimit = height * 0.5
+
+  for (let y = 0; y < heightLimit; y++) {
+    let isSolidLine = true
+    let isLineBlack = true
+
+    // Check if the entire line is solid and determine if it is black
+    const { r: firstR, g: firstG, b: firstB } = getPixelColor(data, width, 0, y)
+    const skipFirstPixels = 6
+
+    for (let x = skipFirstPixels; x < width - skipFirstPixels; x++) {
+      const { r, g, b } = getPixelColor(data, width, x, y)
+      if (!isColorMatch({ r: firstR, g: firstG, b: firstB }, r, g, b, 18)) {
+        isSolidLine = false
+        break
+      }
+    }
+
+    if (isSolidLine) {
+      isLineBlack = colorIsBlack(firstR, firstG, firstB)
+    } else {
+      isLineBlack = false // If the line is not solid, it cannot be black
+    }
+
+    if (!isLineBlack && isSolidLine) {
+      // Start of a new non-black group
+      if (!inNonBlackGroup) {
+        inNonBlackGroup = true
+        groupCount++
+      }
+
+      // Track the end of the current group
+      let groupEndY = y
+
+      // Continue until the group ends (i.e., lines become black or non-solid again)
+      while (groupEndY < height) {
+        let isGroupLineBlack = true
+        let isGroupLineSolid = true
+
+        const {
+          r: groupFirstR,
+          g: groupFirstG,
+          b: groupFirstB,
+        } = getPixelColor(data, width, 0, groupEndY)
+        for (let x = 1; x < width; x++) {
+          const { r, g, b } = getPixelColor(data, width, x, groupEndY)
+          if (r !== groupFirstR || g !== groupFirstG || b !== groupFirstB) {
+            isGroupLineSolid = false
+            break
+          }
+        }
+
+        if (isGroupLineSolid) {
+          isGroupLineBlack = colorIsBlack(groupFirstR, groupFirstG, groupFirstB)
+        } else {
+          isGroupLineBlack = false // If the line is not solid, it cannot be black
+        }
+
+        if (isGroupLineBlack || !isGroupLineSolid) break
+        groupEndY++
+      }
+
+      // Update the end of the group based on group count
+      if (groupCount === 1) {
+        firstGroupEndY = groupEndY
+      } else if (groupCount === 2) {
+        secondGroupEndY = groupEndY
+        return secondGroupEndY // Return immediately when second group is found
+      }
+
+      y = groupEndY // Skip to the end of the current group
+    } else {
+      // End of a non-black group
+      inNonBlackGroup = false
+    }
+  }
+
+  // If only one group was found, return its end; otherwise, return -1
+  return firstGroupEndY !== -1 ? firstGroupEndY : -1
+}
 
 // Function to find the second group of lines that are not black
 function findSecondNonBlackGroup(data, width, height) {
   let groupCount = 0
   let inNonBlackGroup = false
 
-  for (let y = 0; y < height; y++) {
+  const heightLimit = height * 0.5
+
+  for (let y = 0; y < heightLimit; y++) {
     let isSolidLine = true
     let isLineBlack = true
 
@@ -126,7 +216,7 @@ async function preprocessImage(buffer) {
     const { width, height, data } = png
 
     // Find the second non-black group
-    const secondGroupEndY = findSecondNonBlackGroup(data, width, height)
+    const secondGroupEndY = findKeyNonBlackGroup(data, width, height)
     if (secondGroupEndY === -1) {
       throw new Error('Second non-black group not found.')
     }
@@ -144,16 +234,21 @@ async function preprocessImage(buffer) {
 
 // Example usage
 const testPreprocessing = async () => {
-  const inputFilePath = path.join(__dirname, 'data', 'wordle_2.jpg')
+  const inputFilePath = path.join(__dirname, 'data', 'ios_test.png')
 
   let buffer = fs.readFileSync(inputFilePath)
 
   // jpeg to png
   buffer = await imageToPng(buffer)
 
+  // const metadata = await sharp(buffer).metadata()
+  // console.log(metadata)
+
+  // return
+
   const result = await preprocessImage(buffer)
 
-  const outputFilePath = path.join(__dirname, 'data', 'wordle_2_processed.png')
+  const outputFilePath = path.join(__dirname, 'data', 'ios_test_result.png')
   fs.writeFileSync(outputFilePath, result)
   console.log(`Processed image saved to ${outputFilePath}`)
 }
