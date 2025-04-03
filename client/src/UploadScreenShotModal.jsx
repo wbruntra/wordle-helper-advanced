@@ -26,7 +26,7 @@ function UploadScreenShotModal({ show, handleClose, setGuesses }) {
       setGuesses(response.data.guesses)
       setSuccessMessage('Screenshot successfully processed!') // Show success message
       // Optionally close the modal after successful interpretation
-      // handleClose()
+      handleClose()
     } catch (error) {
       console.error('Error interpreting screenshot:', error)
       setErrorMessage('Something went wrong while processing the screenshot. Please try again.')
