@@ -131,7 +131,7 @@ function FileUpload({ fileUrl, setFileUrl }) {
             gap: '5px',
           }}
         >
-          <p style={{ margin: 0, fontSize: '0.9rem' }}>File URL:</p>
+          <p style={{ margin: 0, fontSize: '0.9rem' }}>File:</p>
           <a
             href={fileUrl}
             target="_blank"
@@ -143,7 +143,7 @@ function FileUpload({ fileUrl, setFileUrl }) {
               fontSize: '0.85rem',
             }}
           >
-            {fileUrl}
+            Screenshot
           </a>
         </div>
       )}
