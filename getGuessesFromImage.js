@@ -29,7 +29,7 @@ const getWordsGuessed = async (image_buffer) => {
   const base64Image = image_buffer.toString('base64')
 
   const response = await openai.responses.create({
-    model: 'gpt-4o-mini',
+    model: 'gpt-5-mini',
     input: [
       {
         role: 'user',

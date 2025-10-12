@@ -5,12 +5,10 @@ const logger = require('morgan')
 const randomstring = require('randomstring')
 const _ = require('lodash')
 const path = require('path')
-const getPresignedURL = require('./getPresignedURL')
+const s3 = require('./s3')
+const { s3: config } = require('./config')
 const secrets = require('./secrets')
-// const getGuessesFromImage = require('./getGuessesFromImage')
 const { getGuesses } = require('./getGuesses')
-
-require('dotenv').config()
 
 const app = express()
 const port = process.env.PORT || 3001
@@ -44,11 +42,19 @@ app.post('/api/get-presigned-url', async (req, res) => {
 
   console.log(key, fileType)
 
-  const url = await getPresignedURL(key, fileType)
+  const presignedUrl = await s3.getPresignedUploadUrl({
+    key,
+    bucket: config.bucketName,
+    contentType: fileType,
+    expiresIn: 180,
+    acl: 'public-read'
+  })
+
+  const fileUrl = s3.getPublicUrl(key, config.bucketName)
 
   return res.send({
-    presignedUrl: url,
-    fileUrl: `https://${secrets.LINODE_BUCKET_NAME}.${secrets.LINODE_S3_ENDPOINT}/${key}`,
+    presignedUrl,
+    fileUrl,
     key: key,
   })
 })

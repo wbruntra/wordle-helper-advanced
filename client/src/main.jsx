@@ -5,8 +5,9 @@ import './styles/bootstrap.scss'
 import './styles/index.scss'
 
 import Wordle from './Wordle.jsx'
-import FileUpload from './FileUpload.jsx'
 import { RouterProvider, createHashRouter } from 'react-router-dom'
+import { Provider } from 'react-redux'
+import { store } from './redux/store.js'
 
 const router = createHashRouter([
   {
@@ -21,6 +22,8 @@ const router = createHashRouter([
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <Provider store={store}>
+      <RouterProvider router={router} />
+    </Provider>
   </StrictMode>,
 )
