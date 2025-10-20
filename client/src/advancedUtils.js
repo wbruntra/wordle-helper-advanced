@@ -31,7 +31,7 @@ export const getCanonical = (s, removeAccents = false) => {
  * Returns a canonical form of the user-input string `s`, where all characters are uppercased and chararacters other than 'Y' and 'G' are replaced with a hyphen.
  * @param {string} key
  */
-const getCanonicalKey = (key) => {
+export const getCanonicalKey = (key) => {
   return key.toUpperCase().trim().replace(/[^YG]/g, '-')
 }
 
