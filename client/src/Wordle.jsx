@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { FiSettings } from 'react-icons/fi'
 import { MdOutlineScreenshot } from 'react-icons/md'
 import { AiOutlineBarChart } from 'react-icons/ai'
+import { useSelector, useDispatch } from 'react-redux'
+import { setModalState } from './redux/uiSlice'
 
 import { evaluateToString } from './advancedUtils'
 import { commonPlusOfficial, nytAll, nytSolutions } from './wordlists/index'
@@ -20,25 +22,25 @@ const wordLists = {
   nytAll,
 }
 
+// Set example once at module level since it never changes
+const example = _.sample(examples)
+
 function Wordle() {
-  const [touched, setTouched] = useState(false)
   const [guesses, setGuesses] = useState([])
   const [word, setWord] = useState('')
   const [key, setKey] = useState('')
   const [wordListName, setWordListName] = useState('nytAll')
   const [currentFilteredList, setFiltered] = useState(wordLists[wordListName].slice())
   const inputEl = useRef(null)
-  const [example, setExample] = useState(_.sample(examples))
   const [showExample, setShowExample] = useState(true)
   const [error, setError] = useState('')
-  const [showWordListModal, setShowWordListModal] = useState(false)
   const [answerInput, setAnswerInput] = useState('')
   const [editingGuessIndex, setEditingGuessIndex] = useState(null)
   const [editWord, setEditWord] = useState('')
   const [editKey, setEditKey] = useState('')
 
-  const [showUploadModal, setShowUploadModal] = useState(false)
-  const [showAnalysisModal, setShowAnalysisModal] = useState(false)
+  const dispatch = useDispatch()
+  const modals = useSelector(state => state.ui.modals)
 
   useEffect(() => {
     let newFilteredList = wordLists[wordListName].slice()
@@ -47,7 +49,6 @@ function Wordle() {
 
   const resetGuesses = () => {
     setGuesses([])
-    setTouched(false)
   }
 
   const addGuess = (e) => {
@@ -68,7 +69,6 @@ function Wordle() {
     setGuesses(newGuesses)
     setWord('')
     setKey('')
-    setTouched(true)
     document.activeElement.blur()
     inputEl.current.focus()
   }
@@ -115,13 +115,13 @@ function Wordle() {
       <div className="container mt-3">
         <div className="d-flex justify-content-end">
           <div>
-            <span className="selectable me-2" onClick={() => setShowUploadModal(true)}>
+            <span className="selectable me-2" onClick={() => dispatch(setModalState({ modalName: 'upload', isOpen: true }))}>
               <MdOutlineScreenshot size={'2em'} />
             </span>
-            <span className="selectable me-2" onClick={() => setShowAnalysisModal(true)}>
+            <span className="selectable me-2" onClick={() => dispatch(setModalState({ modalName: 'analysis', isOpen: true }))}>
               <AiOutlineBarChart size={'2em'} />
             </span>
-            <span className="selectable" onClick={() => setShowWordListModal(true)}>
+            <span className="selectable" onClick={() => dispatch(setModalState({ modalName: 'wordList', isOpen: true }))}>
               <FiSettings size={'2em'} />
             </span>
           </div>
@@ -248,26 +248,26 @@ function Wordle() {
       <WordListModal
         wordList={wordListName}
         setWordList={setWordListName}
-        show={showWordListModal}
+        show={modals.wordList}
         handleClose={() => {
-          setShowWordListModal(false)
+          dispatch(setModalState({ modalName: 'wordList', isOpen: false }))
         }}
         answerInput={answerInput}
         setAnswerInput={setAnswerInput}
       />
 
       <UploadScreenShotModal
-        show={showUploadModal}
+        show={modals.upload}
         handleClose={() => {
-          setShowUploadModal(false)
+          dispatch(setModalState({ modalName: 'upload', isOpen: false }))
         }}
         setGuesses={setGuesses}
       />
 
       <GameAnalysisModal
-        show={showAnalysisModal}
+        show={modals.analysis}
         handleClose={() => {
-          setShowAnalysisModal(false)
+          dispatch(setModalState({ modalName: 'analysis', isOpen: false }))
         }}
         guesses={guesses}
         wordList={currentFilteredList}
