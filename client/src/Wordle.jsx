@@ -28,7 +28,6 @@ function Wordle() {
   const [wordListName, setWordListName] = useState('nytAll')
   const [currentFilteredList, setFiltered] = useState(wordLists[wordListName].slice())
   const inputEl = useRef(null)
-  const [bins, setBins] = useState([])
   const [example, setExample] = useState(_.sample(examples))
   const [showExample, setShowExample] = useState(true)
   const [error, setError] = useState('')
@@ -45,23 +44,6 @@ function Wordle() {
     let newFilteredList = wordLists[wordListName].slice()
     setFiltered(newFilteredList)
   }, [wordListName, guesses])
-
-  useEffect(() => {
-    setGuesses([
-      {
-        word: 'DRONE',
-        key: '--Y--',
-      },
-      {
-        word: 'STAMP',
-        key: '---Y-',
-      },
-      {
-        word: 'LIMBO',
-        key: 'GGGGG',
-      },
-    ])
-  }, [])
 
   const resetGuesses = () => {
     setGuesses([])
