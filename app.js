@@ -5,9 +5,8 @@ const logger = require('morgan')
 const randomstring = require('randomstring')
 const _ = require('lodash')
 const path = require('path')
-const s3 = require('./s3')
+const s3 = require('./bunS3')
 const { s3: config } = require('./config')
-const secrets = require('./secrets')
 const { getGuesses } = require('./getGuesses')
 
 const app = express()
@@ -47,7 +46,6 @@ app.post('/api/get-presigned-url', async (req, res) => {
     bucket: config.bucketName,
     contentType: fileType,
     expiresIn: 180,
-    acl: 'public-read'
   })
 
   const fileUrl = s3.getPublicUrl(key, config.bucketName)

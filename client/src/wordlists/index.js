@@ -1,4 +1,4 @@
-import { decompress } from '../utils'
+import { decompress } from '../advancedUtils'
 
 const all = {
   commonPlusOfficial:

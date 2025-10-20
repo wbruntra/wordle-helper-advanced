@@ -1,7 +1,6 @@
 import { analyzeGuess } from './utils.js'
 
 const run = () => {
-  console.log('Hello!')
   const filteredList = [
     'AFARA',
     'AFARS',

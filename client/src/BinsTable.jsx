@@ -1,5 +1,4 @@
-import { getBins } from './utils';
-import { weightKeys, wordsAtOrBelowLimit, countPossibleKeys } from './scorers';
+import { wordsAtOrBelowLimit } from './scorers';
 
 import _ from 'lodash'
 
@@ -36,7 +35,7 @@ function BinsTable({ bins }) {
             <td>{toPct(uniqueWords / totalWords)}</td>
             <td>{uniqueWords}</td>
           </tr>
-          {summaryStats.map((smry, i) => (
+          {summaryStats.map((smry) => (
             <tr key={`limit-${smry.limit}`}>
               <td>Chance of ≤ {smry.limit}</td>
               <td>{toPct(smry.wordCount / totalWords)}</td>

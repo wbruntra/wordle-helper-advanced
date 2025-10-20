@@ -1,4 +1,5 @@
-import { applyGuesses, filterWordsUsingGuessResult, getBins, orderEntireWordList } from './utils'
+import { orderEntireWordList } from './utils'
+import { applyGuesses, filterWordsUsingGuessResult, getBins } from './advancedUtils'
 import { useEffect, useState } from 'react'
 import _ from 'lodash'
 import { BsPencil } from 'react-icons/bs'
