@@ -8,6 +8,7 @@ import Wordle from './Wordle.jsx'
 import { RouterProvider, createHashRouter } from 'react-router-dom'
 import { Provider } from 'react-redux'
 import { store } from './redux/store.js'
+import { ThemeProvider } from 'react-bootstrap'
 
 const router = createHashRouter([
   {
@@ -23,7 +24,9 @@ const router = createHashRouter([
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Provider store={store}>
-      <RouterProvider router={router} />
+      <ThemeProvider theme="dark">
+        <RouterProvider router={router} />
+      </ThemeProvider>
     </Provider>
   </StrictMode>,
 )

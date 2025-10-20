@@ -527,7 +527,7 @@ export const compareGuessWithOptimal = (
 
   const {
     maxWordListForOptimal = 2000,
-    maxOptimalCandidates = 500,
+    maxOptimalCandidates = 900,
     candidateStrategy = 'sample',
   } = options
 

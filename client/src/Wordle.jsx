@@ -129,7 +129,7 @@ function Wordle() {
   }
 
   return (
-    <div data-bs-theme="dark">
+    <div>
       <div className="container mt-3">
         <div className="d-flex justify-content-end">
           <div>

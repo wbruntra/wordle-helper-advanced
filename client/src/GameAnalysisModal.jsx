@@ -31,7 +31,7 @@ function GameAnalysisModal({ show, handleClose, guesses, wordList, answer = null
           wordList,
           {
             maxWordListForOptimal: 2000,
-            maxOptimalCandidates: 600,
+            maxOptimalCandidates: 900,
             candidateStrategy: 'sample',
           },
         )
@@ -116,7 +116,7 @@ function GameAnalysisModal({ show, handleClose, guesses, wordList, answer = null
             </div>
 
             {/* Optimal Guess Analysis */}
-            <div className="mb-4 p-3 border rounded bg-light">
+            <div className="mb-4 p-3 border rounded bg-secondary">
               <h5 className="mb-3">Optimal Guess</h5>
               {optimalAnalysis && optimalWord ? (
                 <>
