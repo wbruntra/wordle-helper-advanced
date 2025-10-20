@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { FiSettings } from 'react-icons/fi'
 import { MdOutlineScreenshot } from 'react-icons/md'
+import { AiOutlineBarChart } from 'react-icons/ai'
 
 import { evaluateToString } from './utils'
 import { commonPlusOfficial, nytAll, nytSolutions } from './wordlists/index'
@@ -8,6 +9,7 @@ import { getCanonical, getCanonicalKey } from './utils'
 import DisplayStatus from './DisplayStatus'
 import Guess from './Guess'
 import WordListModal from './WordListModal'
+import GameAnalysisModal from './GameAnalysisModal'
 import _ from 'lodash'
 import examples from './examples.json'
 import UploadScreenShotModal from './UploadScreenShotModal'
@@ -30,8 +32,6 @@ function Wordle() {
   const [example, setExample] = useState(_.sample(examples))
   const [showExample, setShowExample] = useState(true)
   const [error, setError] = useState('')
-  const [countOnly, setCountOnly] = useState(true)
-  const [showGuessInput, setShowGuessInput] = useState(true)
   const [showWordListModal, setShowWordListModal] = useState(false)
   const [answerInput, setAnswerInput] = useState('')
   const [editingGuessIndex, setEditingGuessIndex] = useState(null)
@@ -39,13 +39,29 @@ function Wordle() {
   const [editKey, setEditKey] = useState('')
 
   const [showUploadModal, setShowUploadModal] = useState(false)
-
-  const params = new URLSearchParams(window.location.search)
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false)
 
   useEffect(() => {
     let newFilteredList = wordLists[wordListName].slice()
     setFiltered(newFilteredList)
   }, [wordListName, guesses])
+
+  useEffect(() => {
+    setGuesses([
+      {
+        word: 'DRONE',
+        key: '--Y--',
+      },
+      {
+        word: 'STAMP',
+        key: '---Y-',
+      },
+      {
+        word: 'LIMBO',
+        key: 'GGGGG',
+      },
+    ])
+  }, [])
 
   const resetGuesses = () => {
     setGuesses([])
@@ -119,6 +135,9 @@ function Wordle() {
           <div>
             <span className="selectable me-2" onClick={() => setShowUploadModal(true)}>
               <MdOutlineScreenshot size={'2em'} />
+            </span>
+            <span className="selectable me-2" onClick={() => setShowAnalysisModal(true)}>
+              <AiOutlineBarChart size={'2em'} />
             </span>
             <span className="selectable" onClick={() => setShowWordListModal(true)}>
               <FiSettings size={'2em'} />
@@ -261,6 +280,16 @@ function Wordle() {
           setShowUploadModal(false)
         }}
         setGuesses={setGuesses}
+      />
+
+      <GameAnalysisModal
+        show={showAnalysisModal}
+        handleClose={() => {
+          setShowAnalysisModal(false)
+        }}
+        guesses={guesses}
+        wordList={currentFilteredList}
+        answer={answerInput}
       />
     </div>
   )
