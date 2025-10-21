@@ -22,7 +22,7 @@ const getWordsGuessed = async (image_buffer) => {
 
   const wordsExample = { words: ['CAGEY', 'STOMP', 'WATER'] }
 
-  const instructions = `This image contains a prominent display of up to six rows of 5-letter words, one word on each row. Your task is to identify the word in each row. Your response should contain the words in an array, like this example: ${JSON.stringify(
+  const instructions = `This screenshot from the game Wordle contains a prominent display of up to six rows of 5-letter words, one word on each row. Please identify the word in each row. Your response should contain the words in an array, like this example: ${JSON.stringify(
     wordsExample,
   )}.`
 

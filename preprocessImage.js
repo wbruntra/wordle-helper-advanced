@@ -1,7 +1,7 @@
 const PNG = require('pngjs').PNG
 const fs = require('fs')
 const path = require('path')
-const { getPixelColor, isColorMatch, colorIsBlack } = require('./utils')
+const { getPixelColor, isColorMatch, colorIsBlack } = require('./backendUtils')
 const imageToPng = require('./imageToPng')
 const sharp = require('sharp')
 

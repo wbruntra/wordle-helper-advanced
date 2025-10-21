@@ -4,7 +4,9 @@
   "main": "index.js",
   "scripts": {
     "api": "bun --watch ./bin/www",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "bun test utils.test.js auto-play-wordle.test.js",
+    "test:watch": "bun test --watch utils.test.js auto-play-wordle.test.js",
+    "populate:first-guesses": "bun run ./populate-first-guesses.js"
   },
   "keywords": [],
   "author": "",
@@ -15,20 +17,20 @@
     "@aws-sdk/s3-request-presigner": "^3.908.0",
     "@jimp/utils": "^1.6.0",
     "@reduxjs/toolkit": "^2.9.0",
-    "aws-sdk": "^2.1692.0",
     "axios": "^1.12.2",
     "cors": "^2.8.5",
-    "dotenv": "^16.6.1",
     "express": "^5.1.0",
     "jimp": "^1.6.0",
+    "knex": "^3.1.0",
+    "knex-bun-sqlite": "^1.4.0",
     "lodash": "^4.17.21",
     "morgan": "^1.10.1",
-    "nodemon": "^3.1.10",
     "openai": "^4.104.0",
     "pngjs": "^7.0.0",
     "randomstring": "^1.3.1",
     "react-redux": "^9.2.0",
     "sharp": "^0.34.4",
+    "sqlite3": "^5.1.7",
     "tesseract.js": "^6.0.1",
     "winston": "^3.18.3"
   }

@@ -7,7 +7,7 @@ import './styles/index.scss'
 import Wordle from './Wordle.jsx'
 import { RouterProvider, createHashRouter } from 'react-router-dom'
 import { Provider } from 'react-redux'
-import { store } from './redux/store.js'
+import { store } from './redux/store.ts'
 import { ThemeProvider } from 'react-bootstrap'
 
 const router = createHashRouter([

@@ -2,10 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { FiSettings } from 'react-icons/fi'
 import { MdOutlineScreenshot } from 'react-icons/md'
 import { AiOutlineBarChart } from 'react-icons/ai'
+import { useSelector, useDispatch } from 'react-redux'
+import { setModalState } from './redux/uiSlice'
+import { addGuess, updateGuess, setGuesses } from './redux/gameSlice'
 
-import { evaluateToString } from './utils'
-import { commonPlusOfficial, nytAll, nytSolutions } from './wordlists/index'
-import { getCanonical, getCanonicalKey } from './utils'
+import { evaluateToString } from './advancedUtils'
+// import { commonPlusOfficial, nytAll, nytSolutions } from './wordlists/index'
+import likelyWordList from './wordlists/likely-word-list.json'
+
 import DisplayStatus from './DisplayStatus'
 import Guess from './Guess'
 import WordListModal from './WordListModal'
@@ -15,42 +19,38 @@ import examples from './examples.json'
 import UploadScreenShotModal from './UploadScreenShotModal'
 
 const wordLists = {
-  nytSolutions,
-  commonPlusOfficial,
-  nytAll,
+  // nytSolutions,
+  // commonPlusOfficial,
+  // nytAll,
+  likely: likelyWordList,
 }
 
+// Set example once at module level since it never changes
+const example = _.sample(examples)
+
 function Wordle() {
-  const [touched, setTouched] = useState(false)
-  const [guesses, setGuesses] = useState([])
   const [word, setWord] = useState('')
   const [key, setKey] = useState('')
-  const [wordListName, setWordListName] = useState('nytAll')
+  const [wordListName, setWordListName] = useState('likely')
   const [currentFilteredList, setFiltered] = useState(wordLists[wordListName].slice())
   const inputEl = useRef(null)
-  const [example, setExample] = useState(_.sample(examples))
   const [showExample, setShowExample] = useState(true)
   const [error, setError] = useState('')
-  const [showWordListModal, setShowWordListModal] = useState(false)
   const [answerInput, setAnswerInput] = useState('')
   const [editingGuessIndex, setEditingGuessIndex] = useState(null)
   const [editWord, setEditWord] = useState('')
   const [editKey, setEditKey] = useState('')
 
-  const [showUploadModal, setShowUploadModal] = useState(false)
-  const [showAnalysisModal, setShowAnalysisModal] = useState(false)
+  const dispatch = useDispatch()
+  const modals = useSelector(state => state.ui.modals)
+  const guesses = useSelector(state => state.game.guesses)
 
   useEffect(() => {
     let newFilteredList = wordLists[wordListName].slice()
     setFiltered(newFilteredList)
   }, [wordListName, guesses])
 
-  const resetGuesses = () => {
-    setGuesses([])
-    setTouched(false)
-  }
-
-  const addGuess = (e) => {
+  const handleAddGuess = (e) => {
     e.preventDefault()
     if (!(word.length === 5 && key.length === 5)) {
       setError('Invalid Input')
@@ -58,25 +58,11 @@ function Wordle() {
     }
     setError('')
     setShowExample(false)
-    const newGuesses = [
-      ...guesses,
-      {
-        word: getCanonical(word),
-        key: getCanonicalKey(key),
-      },
-    ]
-    setGuesses(newGuesses)
+    dispatch(addGuess({ word, key }))
     setWord('')
     setKey('')
-    setTouched(true)
     document.activeElement.blur()
     inputEl.current.focus()
-  }
-
-  const removeGuess = (index) => {
-    const newGuesses = [...guesses]
-    newGuesses.splice(index, 1)
-    setGuesses(newGuesses)
   }
 
   const startEditingGuess = (index) => {
@@ -91,12 +77,7 @@ function Wordle() {
       setError('Invalid Input')
       return
     }
-    const newGuesses = [...guesses]
-    newGuesses[editingGuessIndex] = {
-      word: getCanonical(editWord),
-      key: getCanonicalKey(editKey),
-    }
-    setGuesses(newGuesses)
+    dispatch(updateGuess({ index: editingGuessIndex, word: editWord, key: editKey }))
     setEditingGuessIndex(null)
     setEditWord('')
     setEditKey('')
@@ -115,13 +96,13 @@ function Wordle() {
       <div className="container mt-3">
         <div className="d-flex justify-content-end">
           <div>
-            <span className="selectable me-2" onClick={() => setShowUploadModal(true)}>
+            <span className="selectable me-2" onClick={() => dispatch(setModalState({ modalName: 'upload', isOpen: true }))}>
               <MdOutlineScreenshot size={'2em'} />
             </span>
-            <span className="selectable me-2" onClick={() => setShowAnalysisModal(true)}>
+            <span className="selectable me-2" onClick={() => dispatch(setModalState({ modalName: 'analysis', isOpen: true }))}>
               <AiOutlineBarChart size={'2em'} />
             </span>
-            <span className="selectable" onClick={() => setShowWordListModal(true)}>
+            <span className="selectable" onClick={() => dispatch(setModalState({ modalName: 'wordList', isOpen: true }))}>
               <FiSettings size={'2em'} />
             </span>
           </div>
@@ -162,7 +143,7 @@ function Wordle() {
         {/* New Guess Input */}
         {editingGuessIndex === null && (
           <div className="row justify-content-center">
-            <form className="mb-3 col-8 col-md-3" onSubmit={addGuess}>
+            <form className="mb-3 col-8 col-md-3" onSubmit={handleAddGuess}>
               <fieldset className="mb-2">
                 <input
                   className="font-mono form-control"
@@ -238,36 +219,33 @@ function Wordle() {
 
         <DisplayStatus
           guesses={guesses}
-          setGuesses={setGuesses}
-          resetGuesses={resetGuesses}
           startingList={currentFilteredList}
-          removeGuess={removeGuess}
           onGuessClick={startEditingGuess}
         />
       </div>
       <WordListModal
         wordList={wordListName}
         setWordList={setWordListName}
-        show={showWordListModal}
+        show={modals.wordList}
         handleClose={() => {
-          setShowWordListModal(false)
+          dispatch(setModalState({ modalName: 'wordList', isOpen: false }))
         }}
         answerInput={answerInput}
         setAnswerInput={setAnswerInput}
       />
 
       <UploadScreenShotModal
-        show={showUploadModal}
+        show={modals.upload}
         handleClose={() => {
-          setShowUploadModal(false)
+          dispatch(setModalState({ modalName: 'upload', isOpen: false }))
         }}
-        setGuesses={setGuesses}
+        setGuesses={(newGuesses) => dispatch(setGuesses(newGuesses))}
       />
 
       <GameAnalysisModal
-        show={showAnalysisModal}
+        show={modals.analysis}
         handleClose={() => {
-          setShowAnalysisModal(false)
+          dispatch(setModalState({ modalName: 'analysis', isOpen: false }))
         }}
         guesses={guesses}
         wordList={currentFilteredList}

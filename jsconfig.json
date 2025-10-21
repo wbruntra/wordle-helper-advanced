@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@config": ["config.js"],
+      "@secrets": ["secrets.js"],
+      "@db_connection": ["db_connect.js"],
+      "@advancedUtils": ["client/src/advancedUtils.js"],
+    }
+  }
+}

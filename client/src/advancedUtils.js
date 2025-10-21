@@ -31,7 +31,7 @@ export const getCanonical = (s, removeAccents = false) => {
  * Returns a canonical form of the user-input string `s`, where all characters are uppercased and chararacters other than 'Y' and 'G' are replaced with a hyphen.
  * @param {string} key
  */
-const getCanonicalKey = (key) => {
+export const getCanonicalKey = (key) => {
   return key.toUpperCase().trim().replace(/[^YG]/g, '-')
 }
 
@@ -734,4 +734,33 @@ export const findOptimalGuesses = (wordList, topN = 1, options = {}) => {
       candidatePoolNote ? `. ${candidatePoolNote}` : '',
     ),
   }))
+}
+
+export function compress(words) {
+  let lastword = 'zzzzz'
+  let result = ''
+  for (const word of words) {
+    const wordLower = word.toLowerCase()
+    let prefixLen = 0
+    while (prefixLen < 5 && lastword[prefixLen] === wordLower[prefixLen]) {
+      prefixLen++
+    }
+    const suffix = wordLower.slice(prefixLen)
+    if (suffix.length > 0) {
+      result += suffix[0].toUpperCase() + suffix.slice(1)
+    }
+    lastword = wordLower
+  }
+  return result
+}
+
+/**
+ * @param {string[]} guessList - List of guessed words
+ */
+export function getUnusedLetters(guessList) {
+  const letters = 'abcdefghijklmnopqrstuvwxyz'.toUpperCase()
+  const usedLetters = guessList.reduce((acc, guess) => {
+    return acc + guess
+  }, '')
+  return letters.split('').filter((letter) => !usedLetters.includes(letter))
 }

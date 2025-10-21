@@ -29,3 +29,5 @@ test_query.js
 test_db_data.json
 test_db_data_audience_reports.json
 .aider*
+
+eng.traineddata

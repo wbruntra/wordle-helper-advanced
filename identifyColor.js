@@ -1,7 +1,7 @@
 const path = require('path')
 const fs = require('fs')
 const { Jimp, intToRGBA } = require('jimp')
-const { colorIsBlack, getColorDifference } = require('./utils')
+const { colorIsBlack, getColorDifference } = require('./backendUtils')
 
 const getColorName = (r, g, b) => {
   const knownColors = [
