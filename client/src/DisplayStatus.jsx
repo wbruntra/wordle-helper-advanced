@@ -4,22 +4,19 @@ import { useEffect, useState } from 'react'
 import _ from 'lodash'
 import { BsPencil } from 'react-icons/bs'
 import { TiTimes } from 'react-icons/ti'
+import { useSelector, useDispatch } from 'react-redux'
+import { removeGuess, setGuesses } from './redux/gameSlice'
 
 import Guess from './Guess'
 import BinsTable from './BinsTable'
 
-const removeIdx = (arr, idx) => {
-  return [...arr.slice(0, idx), ...arr.slice(idx + 1)]
-}
-
 function DisplayStatus({
   guesses,
-  setGuesses,
-  resetGuesses,
   startingList,
-  removeGuess,
   onGuessClick,
 }) {
+  const dispatch = useDispatch()
+  const currentGuesses = useSelector(state => state.game.guesses)
   const [showDepth, setShowDepth] = useState(false)
   const [usingOnlyFiltered, setUsingOnlyFiltered] = useState(true)
   const [countOnly, setCountOnly] = useState(true)
@@ -33,14 +30,14 @@ function DisplayStatus({
   useEffect(() => {
     let appliedGuesses = []
     if (clickedGuess) {
-      for (let i = 0; i < guesses.length; i++) {
-        appliedGuesses.push(guesses[i])
-        if (guesses[i].word === clickedGuess) {
+      for (let i = 0; i < currentGuesses.length; i++) {
+        appliedGuesses.push(currentGuesses[i])
+        if (currentGuesses[i].word === clickedGuess) {
           break
         }
       }
     } else {
-      appliedGuesses = guesses
+      appliedGuesses = currentGuesses
     }
 
     let localFiltered = applyGuesses(startingList, appliedGuesses)
@@ -62,18 +59,18 @@ function DisplayStatus({
       newWordOrder = localFiltered.map((w) => ({ word: w }))
     }
     setOrderedWords(newWordOrder)
-  }, [guesses, usingOnlyFiltered, startingList, clickedGuess])
+  }, [currentGuesses, usingOnlyFiltered, startingList, clickedGuess])
 
   useEffect(() => {
-    if (guesses.length > 0 && showDepth) {
-      const wordToAnalyze = clickedGuess || guesses[guesses.length - 1].word
+    if (currentGuesses.length > 0 && showDepth) {
+      const wordToAnalyze = clickedGuess || currentGuesses[currentGuesses.length - 1].word
       createBinsForGuess(wordToAnalyze)
     }
-  }, [guesses, showDepth, clickedGuess])
+  }, [currentGuesses, showDepth, clickedGuess])
 
   const createBinsForGuess = (word) => {
     let localFiltered = startingList.slice()
-    for (const guess of guesses) {
+    for (const guess of currentGuesses) {
       if (guess.word === word) {
         break
       }
@@ -90,9 +87,9 @@ function DisplayStatus({
   return (
     <div className="d-flex flex-column">
       <div className="d-flex flex-column text-center mb-3">
-        {guesses.map((guess, i) => {
-          const currentGuesses = guesses.slice(0, i + 1)
-          const filtered = applyGuesses(startingList, currentGuesses)
+        {currentGuesses.map((guess, i) => {
+          const currentGuessSlice = currentGuesses.slice(0, i + 1)
+          const filtered = applyGuesses(startingList, currentGuessSlice)
           return (
             <div
               className="guess selectable-guess mb-3 row justify-content-center"
@@ -120,8 +117,7 @@ function DisplayStatus({
                   className="delete selectable"
                   onClick={() => {
                     setError('')
-                    removeGuess(i)
-                    setGuesses(removeIdx(guesses, i))
+                    dispatch(removeGuess(i))
                     if (clickedGuess === guess.word) {
                       setClickedGuess(null)
                     }
@@ -144,14 +140,14 @@ function DisplayStatus({
         </p>
       )}
       <hr style={{ color: 'white' }} />
-      {guesses.length > 0 && (
+      {currentGuesses.length > 0 && (
         <>
           <div>
-            <button className="btn btn-primary btn-sm mb-3" onClick={resetGuesses}>
+            <button className="btn btn-primary btn-sm mb-3" onClick={() => dispatch(setGuesses([]))}>
               Clear Guesses
             </button>
             <p>
-              There {currentFilteredList.length === 1 ? 'is ' : 'are'}
+              There {currentFilteredList.length === 1 ? 'is' : 'are'}
               <span className="mx-2 fw-bold">{currentFilteredList.length}</span>word
               {currentFilteredList.length === 1 ? '' : 's'} left{' '}
               {clickedGuess && `after guessing ${clickedGuess}`}
@@ -215,7 +211,7 @@ function DisplayStatus({
           </div>
         </>
       )}
-      {guesses.length > 0 && !countOnly && (
+      {currentGuesses.length > 0 && !countOnly && (
         <div className="container mb-3">
           {showDepth ? (
             <button className="btn btn-dark" onClick={() => setShowDepth(false)}>
@@ -226,7 +222,7 @@ function DisplayStatus({
               className="btn btn-dark"
               onClick={() => {
                 setShowDepth(true)
-                const wordToAnalyze = clickedGuess || guesses[guesses.length - 1].word
+                const wordToAnalyze = clickedGuess || currentGuesses[currentGuesses.length - 1].word
                 createBinsForGuess(wordToAnalyze)
               }}
             >

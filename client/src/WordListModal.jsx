@@ -15,7 +15,7 @@ function WordListModal({ show, handleClose, wordList, setWordList, answerInput, 
       </Modal.Header>
 
       <Modal.Body>
-        <p>Select a Wordlist to use</p>
+        {/* <p>Select a Wordlist to use</p>
 
         <select
           value={wordList}
@@ -28,11 +28,11 @@ function WordListModal({ show, handleClose, wordList, setWordList, answerInput, 
               {option.label}
             </option>
           ))}
-        </select>
+        </select> */}
 
         <p className="mt-3">
           If you already know the answer and just want to analyze your guesses, write the solution
-          here:
+          here and the keys will be generated automatically:
         </p>
         <p>
           <input
