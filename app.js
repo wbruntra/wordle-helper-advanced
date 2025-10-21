@@ -7,11 +7,9 @@ const _ = require('lodash')
 const path = require('path')
 const s3 = require('./s3')
 const { s3: config } = require('./config')
-const secrets = require('./secrets')
 const { getGuesses } = require('./getGuesses')
 
 const app = express()
-const port = process.env.PORT || 3001
 
 // Middleware
 app.use(cors())
