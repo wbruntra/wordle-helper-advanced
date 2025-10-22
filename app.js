@@ -10,7 +10,6 @@ const { s3: config } = require('./config')
 const { getGuesses } = require('./getGuesses')
 
 const app = express()
-const port = process.env.PORT || 3001
 
 // Middleware
 app.use(cors())
