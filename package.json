@@ -4,9 +4,15 @@
   "main": "index.js",
   "scripts": {
     "api": "bun --watch ./bin/www",
+    "api:ts": "ts-node-dev --respawn --transpile-only ./bin/www",
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "start": "node ./dist/bin/www",
+    "dev": "ts-node-dev --respawn --transpile-only ./app.ts",
     "test": "bun test utils.test.js auto-play-wordle.test.js",
     "test:watch": "bun test --watch utils.test.js auto-play-wordle.test.js",
-    "populate:first-guesses": "bun run ./populate-first-guesses.js"
+    "populate:first-guesses": "bun run ./populate-first-guesses.js",
+    "type-check": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",
@@ -33,5 +39,14 @@
     "sqlite3": "^5.1.7",
     "tesseract.js": "^6.0.1",
     "winston": "^3.18.3"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/lodash": "^4.17.20",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^24.9.1",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.3"
   }
 }
