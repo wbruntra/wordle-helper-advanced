@@ -220,6 +220,63 @@ const calculateVariance = (binSizes) => {
   return binSizes.reduce((sum, size) => sum + Math.pow(size - mean, 2), 0) / binSizes.length
 }
 
+/**
+ * Find the best guess using a single-pass strategy through candidates
+ * Prioritizes perfect separation, then maximizes bins with minimum variance
+ * @param {Array} remainingWords - Words still possible
+ * @param {Array} candidateWords - Words to test as guesses (will test filtered words first, then all words)
+ * @returns {Object} - Best guess choice with bins, variance, etc.
+ */
+const findBestGuessSinglePass = (remainingWords, candidateWords = likelyWords) => {
+  if (remainingWords.length === 0) {
+    return null
+  }
+  
+  // Test remaining words first, then all words (avoiding duplicates)
+  const candidateOrder = [...remainingWords, ...candidateWords]
+  const seenCandidates = new Set()
+  let bestChoice = null
+  let maxBins = 0
+  let minVariance = Infinity
+  
+  for (const candidate of candidateOrder) {
+    if (seenCandidates.has(candidate)) continue
+    seenCandidates.add(candidate)
+
+    const bins = getBins(candidate, remainingWords, { returnObject: false })
+    const numBins = bins.length
+    const variance = calculateVariance(bins)
+    
+    // Check for perfect separation: each remaining word gets its own bin
+    if (numBins === remainingWords.length) {
+      return {
+        word: candidate,
+        bins: numBins,
+        binSizes: bins,
+        variance: variance,
+        distribution: variance,
+        reason: `PERFECT SEPARATION: Each of ${numBins} remaining words gets its own bin`
+      }
+    }
+    
+    // Prioritize maximum bins, then minimum variance as tiebreaker
+    if (numBins > maxBins || (numBins === maxBins && variance < minVariance)) {
+      maxBins = numBins
+      minVariance = variance
+      bestChoice = {
+        word: candidate,
+        bins: numBins,
+        binSizes: bins,
+        variance: variance,
+        distribution: variance,
+        reason: `Maximizes bins (${numBins}) with optimal distribution variance (${variance.toFixed(2)})`
+      }
+    }
+  }
+  
+  return bestChoice
+}
+
 const getAllKeys = () => {
   const keyCodes = ['-', 'G', 'Y']
   const keyLength = 5
@@ -956,8 +1013,8 @@ Default initial guess is 'CRATE' if not specified.
   }
 }
 
-// Export the main function for use in other modules
-export { solveWordle, solveWordleAPI, ensureCache, getOptimalGuess }
+// Export the main functions for use in other modules
+export { solveWordle, solveWordleAPI, ensureCache, getOptimalGuess, findBestGuessSinglePass }
 
 // Run if this file is executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {

@@ -1,25 +1,10 @@
 import likelyWords from './likely-word-list.json' with { type: 'json' }
 import { getBins, getAnswersMatchingKey, evaluateToString } from '@advancedUtils'
 import { SecondGuessCacheDB } from './database.js'
-import { getOptimalGuess } from './solver.js'
+import { getOptimalGuess, findBestGuessSinglePass } from './solver.js'
 
 // Initialize database cache
 const cacheDB = new SecondGuessCacheDB()
-
-/**
- * Calculate variance of bin sizes for distribution evaluation
- * @param {number[]} binSizes - Array of bin sizes
- * @returns {number} - Variance value
- */
-const calculateVariance = (binSizes) => {
-  const n = binSizes.length
-  if (n <= 1) return 0
-  
-  const mean = binSizes.reduce((sum, size) => sum + size, 0) / n
-  const variance = binSizes.reduce((sum, size) => sum + Math.pow(size - mean, 2), 0) / n
-  
-  return variance
-}
 
 /**
  * Choose the best guess from remaining words using getBins to maximize separation
@@ -31,9 +16,11 @@ const calculateVariance = (binSizes) => {
  * @param {string} options.previousGuess - Previous guess (required for guess 2)
  * @param {string} options.previousEvaluation - Previous evaluation (required for guess 2)
  * @param {boolean} options.generateFullCache - Generate full cache if missing (for guess 2)
+ * @param {boolean} options.silent - Suppress console output (default: false)
  * @returns {Promise<Object>} - Best guess choice
  */
 const chooseBestGuessFromRemaining = async (remainingWords, guessNumber = 3, allWords = likelyWords, options = {}) => {
+  const { silent = false } = options
   if (remainingWords.length === 1) {
     return {
       word: remainingWords[0],
@@ -59,7 +46,7 @@ const chooseBestGuessFromRemaining = async (remainingWords, guessNumber = 3, all
       throw new Error('Guess 2 requires previousGuess and previousEvaluation in options')
     }
     
-    console.log(`   🎯 GUESS 2 STRATEGY: Using cached or calculated optimal separation`)
+    if (!silent) console.log(`   🎯 GUESS 2 STRATEGY: Using cached or calculated optimal separation`)
     
     const recommendation = await getOptimalGuess(previousGuess, previousEvaluation, {
       generateFullCache,
@@ -83,50 +70,16 @@ const chooseBestGuessFromRemaining = async (remainingWords, guessNumber = 3, all
   // STRATEGIC LOGIC FOR GUESSES 4 & 5: Single pass to maximize bins with minimum variance
   // If perfect separation exists, we'll find it naturally and return early; otherwise we optimize distribution
   if ((guessNumber === 4 || guessNumber === 5) && remainingWords.length > 2) {
-    console.log(`   🎯 GUESS ${guessNumber} STRATEGY: Maximizing bins with optimal distribution (combined single pass)`)
+    if (!silent) console.log(`   🎯 GUESS ${guessNumber} STRATEGY: Maximizing bins with optimal distribution (combined single pass)`)
 
-    const candidateOrder = [...remainingWords, ...allWords]
-    const seenCandidates = new Set()
-    let bestChoice = null
-    let maxBins = 0
-    let minVariance = Infinity
-    
-    for (const candidate of candidateOrder) {
-      if (seenCandidates.has(candidate)) continue
-      seenCandidates.add(candidate)
-
-      const bins = getBins(candidate, remainingWords, { returnObject: false })
-      const numBins = bins.length
-      const variance = calculateVariance(bins)
-      
-      // Check for perfect separation: each remaining word gets its own bin
-      if (numBins === remainingWords.length) {
-        console.log(`   ✨ PERFECT SEPARATION FOUND: ${candidate} creates ${numBins} bins!`)
-        return {
-          word: candidate,
-          bins: numBins,
-          binSizes: bins,
-          variance: variance,
-          reason: `PERFECT SEPARATION: Each of ${numBins} remaining words gets its own bin`
-        }
-      }
-      
-      // Prioritize maximum bins, then minimum variance as tiebreaker
-      if (numBins > maxBins || (numBins === maxBins && variance < minVariance)) {
-        maxBins = numBins
-        minVariance = variance
-        bestChoice = {
-          word: candidate,
-          bins: numBins,
-          binSizes: bins,
-          variance: variance,
-          reason: `Maximizes bins (${numBins}) with optimal distribution variance (${variance.toFixed(2)})`
-        }
-      }
-    }
+    const bestChoice = findBestGuessSinglePass(remainingWords, allWords)
     
     if (bestChoice) {
-      console.log(`   🎯 OPTIMAL CHOICE: ${bestChoice.word} creates ${bestChoice.bins} bins with variance ${bestChoice.variance.toFixed(2)}`)
+      if (bestChoice.bins === remainingWords.length) {
+        if (!silent) console.log(`   ✨ PERFECT SEPARATION FOUND: ${bestChoice.word} creates ${bestChoice.bins} bins!`)
+      } else {
+        if (!silent) console.log(`   🎯 OPTIMAL CHOICE: ${bestChoice.word} creates ${bestChoice.bins} bins with variance ${bestChoice.variance.toFixed(2)}`)
+      }
       return bestChoice
     }
   }
@@ -160,13 +113,16 @@ const chooseBestGuessFromRemaining = async (remainingWords, guessNumber = 3, all
  * @param {string} initialGuess - The first guess (default: 'CRATE')
  * @param {Object} options - Configuration options
  * @param {boolean} options.generateFullCache - Generate entire cache if missing (default: false)
+ * @param {boolean} options.silent - Suppress console output (default: false)
  * @returns {Object} - Complete game results
  */
 const autoPlayWordle = async (answer, initialGuess = 'CRATE', options = {}) => {
-  console.log(`\n🎮 AUTO-PLAYING WORDLE`)
-  console.log(`=======================`)
-  console.log(`Target: ${answer}`)
-  console.log(`Starting guess: ${initialGuess}`)
+  const { generateFullCache = false, silent = false } = options
+  
+  if (!silent) console.log(`\n🎮 AUTO-PLAYING WORDLE`)
+  if (!silent) console.log(`=======================`)
+  if (!silent) console.log(`Target: ${answer}`)
+  if (!silent) console.log(`Starting guess: ${initialGuess}`)
   
   const gameState = {
     guesses: [],
@@ -177,9 +133,9 @@ const autoPlayWordle = async (answer, initialGuess = 'CRATE', options = {}) => {
   }
   
   // GUESS 1: Initial guess
-  console.log(`\n1️⃣ GUESS 1: ${initialGuess}`)
+  if (!silent) console.log(`\n1️⃣ GUESS 1: ${initialGuess}`)
   const firstEvaluation = evaluateToString(initialGuess, answer)
-  console.log(`   Evaluation: ${firstEvaluation}`)
+  if (!silent) console.log(`   Evaluation: ${firstEvaluation}`)
   
   gameState.guesses.push(initialGuess)
   gameState.evaluations.push(firstEvaluation)
@@ -187,7 +143,7 @@ const autoPlayWordle = async (answer, initialGuess = 'CRATE', options = {}) => {
   
   // Check if solved in 1
   if (firstEvaluation === 'GGGGG') {
-    console.log(`🎉 SOLVED IN 1 GUESS!`)
+    if (!silent) console.log(`🎉 SOLVED IN 1 GUESS!`)
     gameState.solved = true
     gameState.remainingWords = [answer]
     return gameState
@@ -195,10 +151,10 @@ const autoPlayWordle = async (answer, initialGuess = 'CRATE', options = {}) => {
   
   // Filter after first guess
   gameState.remainingWords = getAnswersMatchingKey(initialGuess, firstEvaluation, gameState.remainingWords)
-  console.log(`   Remaining: ${gameState.remainingWords.length} words`)
+  if (!silent) console.log(`   Remaining: ${gameState.remainingWords.length} words`)
   
   // GUESS 2: Use consolidated chooseBestGuessFromRemaining function
-  console.log(`\n2️⃣ GUESS 2: Determining strategy`)
+  if (!silent) console.log(`\n2️⃣ GUESS 2: Determining strategy`)
   
   const secondGuessChoice = await chooseBestGuessFromRemaining(
     gameState.remainingWords,
@@ -207,15 +163,16 @@ const autoPlayWordle = async (answer, initialGuess = 'CRATE', options = {}) => {
     {
       previousGuess: initialGuess,
       previousEvaluation: firstEvaluation,
-      generateFullCache: options.generateFullCache || false
+      generateFullCache: generateFullCache || false,
+      silent
     }
   )
   
   const secondGuess = secondGuessChoice.word
   const secondEvaluation = evaluateToString(secondGuess, answer)
-  console.log(`   Word: ${secondGuess}`)
-  console.log(`   Evaluation: ${secondEvaluation}`)
-  console.log(`   Strategy: ${secondGuessChoice.reason}`)
+  if (!silent) console.log(`   Word: ${secondGuess}`)
+  if (!silent) console.log(`   Evaluation: ${secondEvaluation}`)
+  if (!silent) console.log(`   Strategy: ${secondGuessChoice.reason}`)
   
   gameState.guesses.push(secondGuess)
   gameState.evaluations.push(secondEvaluation)
@@ -223,7 +180,7 @@ const autoPlayWordle = async (answer, initialGuess = 'CRATE', options = {}) => {
   
   // Check if solved in 2
   if (secondEvaluation === 'GGGGG') {
-    console.log(`🎉 SOLVED IN 2 GUESSES!`)
+    if (!silent) console.log(`🎉 SOLVED IN 2 GUESSES!`)
     gameState.solved = true
     gameState.remainingWords = [answer]
     return gameState
@@ -231,33 +188,33 @@ const autoPlayWordle = async (answer, initialGuess = 'CRATE', options = {}) => {
   
   // Filter after second guess
   gameState.remainingWords = getAnswersMatchingKey(secondGuess, secondEvaluation, gameState.remainingWords)
-  console.log(`   Remaining: ${gameState.remainingWords.length} words`)
+  if (!silent) console.log(`   Remaining: ${gameState.remainingWords.length} words`)
   
   // GUESS 3+: Use getBins strategy for remaining guesses
   let guessNumber = 3
   const maxGuesses = 6 // Wordle limit: 6 guesses maximum
   
   while (!gameState.solved && guessNumber <= maxGuesses) {
-    console.log(`\n${guessNumber}️⃣ GUESS ${guessNumber}: Choosing from ${gameState.remainingWords.length} remaining words`)
+    if (!silent) console.log(`\n${guessNumber}️⃣ GUESS ${guessNumber}: Choosing from ${gameState.remainingWords.length} remaining words`)
     
     if (gameState.remainingWords.length === 0) {
-      console.log(`❌ ERROR: No remaining words - target "${answer}" may not be in word list`)
+      if (!silent) console.log(`❌ ERROR: No remaining words - target "${answer}" may not be in word list`)
       break
     }
     
     // Show remaining words if there are few enough
-    if (gameState.remainingWords.length <= 10) {
-      console.log(`   Remaining options: ${gameState.remainingWords.join(', ')}`)
+    if (!silent && gameState.remainingWords.length <= 10) {
+      if (!silent) console.log(`   Remaining options: ${gameState.remainingWords.join(', ')}`)
     }
     
     // Choose best guess using consolidated strategy function
-    const bestChoice = await chooseBestGuessFromRemaining(gameState.remainingWords, guessNumber, likelyWords)
+    const bestChoice = await chooseBestGuessFromRemaining(gameState.remainingWords, guessNumber, likelyWords, { silent })
     const currentGuess = bestChoice.word
     const currentEvaluation = evaluateToString(currentGuess, answer)
     
-    console.log(`   Word: ${currentGuess}`)
-    console.log(`   Evaluation: ${currentEvaluation}`)
-    console.log(`   Strategy: ${bestChoice.reason}`)
+    if (!silent) console.log(`   Word: ${currentGuess}`)
+    if (!silent) console.log(`   Evaluation: ${currentEvaluation}`)
+    if (!silent) console.log(`   Strategy: ${bestChoice.reason}`)
     
     gameState.guesses.push(currentGuess)
     gameState.evaluations.push(currentEvaluation)
@@ -265,7 +222,7 @@ const autoPlayWordle = async (answer, initialGuess = 'CRATE', options = {}) => {
     
     // Check if solved
     if (currentEvaluation === 'GGGGG') {
-      console.log(`🎉 SOLVED IN ${guessNumber} GUESSES!`)
+      if (!silent) console.log(`🎉 SOLVED IN ${guessNumber} GUESSES!`)
       gameState.solved = true
       gameState.remainingWords = [answer]
       break
@@ -273,13 +230,13 @@ const autoPlayWordle = async (answer, initialGuess = 'CRATE', options = {}) => {
     
     // Filter for next iteration
     gameState.remainingWords = getAnswersMatchingKey(currentGuess, currentEvaluation, gameState.remainingWords)
-    console.log(`   Remaining: ${gameState.remainingWords.length} words`)
+    if (!silent) console.log(`   Remaining: ${gameState.remainingWords.length} words`)
     
     guessNumber++
   }
   
   if (!gameState.solved && guessNumber > maxGuesses) {
-    console.log(`❌ FAILED: Exceeded maximum of ${maxGuesses} guesses`)
+    if (!silent) console.log(`❌ FAILED: Exceeded maximum of ${maxGuesses} guesses`)
   }
   
   return gameState

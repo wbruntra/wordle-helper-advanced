@@ -12,7 +12,7 @@ import likelyWords from './likely-word-list.json' with { type: 'json' }
 
 describe('autoPlayWordle - Core Mechanics', () => {
   test('should solve perfect first guess (STORK vs STORK)', async () => {
-    const result = await autoPlayWordle('STORK', 'STORK')
+    const result = await autoPlayWordle('STORK', 'STORK', { silent: true })
     expect(result.solved).toBe(true)
     expect(result.totalGuesses).toBe(1)
     expect(result.guesses[0]).toBe('STORK')
@@ -21,25 +21,25 @@ describe('autoPlayWordle - Core Mechanics', () => {
 
   test('should solve in multiple guesses', async () => {
     // Using a word that's likely not the starting guess
-    const result = await autoPlayWordle('STORM', 'CRATE')
+    const result = await autoPlayWordle('STORM', 'CRATE', { silent: true })
     expect(result.solved).toBe(true)
     expect(result.totalGuesses).toBeGreaterThanOrEqual(2)
     expect(result.totalGuesses).toBeLessThanOrEqual(6)
   })
 
   test('should not exceed 6 guesses (Wordle limit)', async () => {
-    const result = await autoPlayWordle('STORK', 'SLATE')
+    const result = await autoPlayWordle('STORK', 'SLATE', { silent: true })
     expect(result.totalGuesses).toBeLessThanOrEqual(6)
   })
 
   test('should maintain guess history', async () => {
-    const result = await autoPlayWordle('STORM', 'CRATE')
+    const result = await autoPlayWordle('STORM', 'CRATE', { silent: true })
     expect(result.guesses.length).toBe(result.totalGuesses)
     expect(result.evaluations.length).toBe(result.totalGuesses)
   })
 
   test('should produce valid evaluations', async () => {
-    const result = await autoPlayWordle('STORK', 'CRATE')
+    const result = await autoPlayWordle('STORK', 'CRATE', { silent: true })
     for (const evaluation of result.evaluations) {
       // Each evaluation should be 5 characters
       expect(evaluation.length).toBe(5)
@@ -51,7 +51,7 @@ describe('autoPlayWordle - Core Mechanics', () => {
   })
 
   test('should have matching guess count', async () => {
-    const result = await autoPlayWordle('SPARE', 'STORK')
+    const result = await autoPlayWordle('SPARE', 'STORK', { silent: true })
     expect(result.guesses.length).toBe(result.totalGuesses)
     expect(result.evaluations.length).toBe(result.totalGuesses)
   })
@@ -62,33 +62,33 @@ describe('autoPlayWordle - Core Mechanics', () => {
 // ============================================================================
 
 describe('chooseBestGuessFromRemaining', () => {
-  test('should return single word when only one remains', () => {
-    const result = chooseBestGuessFromRemaining(['STORK'], 3)
+  test('should return single word when only one remains', async () => {
+    const result = await chooseBestGuessFromRemaining(['STORK'], 3)
     expect(result.word).toBe('STORK')
     expect(result.bins).toBe(1)
   })
 
-  test('should return two-word solution for two remaining', () => {
-    const result = chooseBestGuessFromRemaining(['STORK', 'STORM'], 3)
+  test('should return two-word solution for two remaining', async () => {
+    const result = await chooseBestGuessFromRemaining(['STORK', 'STORM'], 3)
     expect(result.word).toBeOneOf(['STORK', 'STORM'])
     expect(result.bins).toBe(2)
   })
 
-  test('should prioritize remaining words for guess 3', () => {
+  test('should prioritize remaining words for guess 3', async () => {
     const remaining = ['STORK', 'STORM', 'STORE']
-    const result = chooseBestGuessFromRemaining(remaining, 3, likelyWords)
+    const result = await chooseBestGuessFromRemaining(remaining, 3, likelyWords)
     expect(remaining).toContain(result.word)
   })
 
-  test('should provide bin information', () => {
-    const result = chooseBestGuessFromRemaining(['STORK', 'STORM', 'STORE'], 3)
+  test('should provide bin information', async () => {
+    const result = await chooseBestGuessFromRemaining(['STORK', 'STORM', 'STORE'], 3)
     expect(result.bins).toBeGreaterThan(0)
     expect(typeof result.reason).toBe('string')
   })
 
-  test('should have valid binSizes array', () => {
+  test('should have valid binSizes array', async () => {
     const remaining = ['STORK', 'STORM', 'STORE', 'SLATE']
-    const result = chooseBestGuessFromRemaining(remaining, 3)
+    const result = await chooseBestGuessFromRemaining(remaining, 3)
     if (result.binSizes) {
       expect(Array.isArray(result.binSizes)).toBe(true)
       expect(result.binSizes.length).toBeGreaterThan(0)
@@ -102,19 +102,19 @@ describe('chooseBestGuessFromRemaining', () => {
 
 describe('autoPlayWordle - Game State', () => {
   test('should initialize with correct starting guess', async () => {
-    const result = await autoPlayWordle('STORK', 'CRATE')
+    const result = await autoPlayWordle('STORK', 'CRATE', { silent: true })
     expect(result.guesses[0]).toBe('CRATE')
   })
 
   test('should track remaining words', async () => {
-    const result = await autoPlayWordle('STORK', 'CRATE')
+    const result = await autoPlayWordle('STORK', 'CRATE', { silent: true })
     if (result.solved) {
       expect(result.remainingWords).toContain('STORK')
     }
   })
 
   test('should have valid evaluations at each step', async () => {
-    const result = await autoPlayWordle('STORM', 'CRATE')
+    const result = await autoPlayWordle('STORM', 'CRATE', { silent: true })
     for (let i = 0; i < result.evaluations.length; i++) {
       const guess = result.guesses[i]
       const evaluation = result.evaluations[i]
@@ -131,7 +131,7 @@ describe('autoPlayWordle - Game State', () => {
 
 describe('autoPlayWordle - Word Narrowing', () => {
   test('should narrow word list after each guess', async () => {
-    const result = await autoPlayWordle('STORK', 'CRATE')
+    const result = await autoPlayWordle('STORK', 'CRATE', { silent: true })
     // First guess should narrow from full list
     expect(result.guesses.length).toBeGreaterThanOrEqual(1)
     // Should reach 1 word when solved
@@ -142,7 +142,7 @@ describe('autoPlayWordle - Word Narrowing', () => {
   })
 
   test('should handle words with repeated letters', async () => {
-    const result = await autoPlayWordle('EERIE', 'CRATE')
+    const result = await autoPlayWordle('EERIE', 'CRATE', { silent: true })
     if (result.solved) {
       expect(result.remainingWords[0]).toBe('EERIE')
     }
@@ -158,13 +158,13 @@ describe('autoPlayWordle - Edge Cases', () => {
     // Test with words that exist in the word list
     const testWord = 'STORK'
     if (likelyWords.includes(testWord)) {
-      const result = await autoPlayWordle(testWord, 'CRATE')
+      const result = await autoPlayWordle(testWord, 'CRATE', { silent: true })
       expect(result.solved).toBe(true)
     }
   })
 
   test('should maintain evaluation consistency', async () => {
-    const result = await autoPlayWordle('SPARE', 'STORK')
+    const result = await autoPlayWordle('SPARE', 'STORK', { silent: true })
     // Verify that each guess produces valid evaluation against answer
     for (let i = 0; i < result.guesses.length; i++) {
       const guess = result.guesses[i]
@@ -180,19 +180,19 @@ describe('autoPlayWordle - Edge Cases', () => {
 // ============================================================================
 
 describe('Strategy - getBins Optimization', () => {
-  test('should select guess that creates max bins', () => {
+  test('should select guess that creates max bins', async () => {
     const remaining = ['STORK', 'STORM', 'STORE', 'SLATE', 'SPARE']
-    const result = chooseBestGuessFromRemaining(remaining, 3)
+    const result = await chooseBestGuessFromRemaining(remaining, 3)
 
     // Count the bins created by this choice
     const bins = getBins(result.word, remaining, { returnObject: false })
     expect(bins.length).toBeGreaterThan(0)
   })
 
-  test('should prefer words from remaining list for guess 3', () => {
+  test('should prefer words from remaining list for guess 3', async () => {
     const remaining = ['STORK', 'STORM', 'STORE']
     const allWords = [...remaining, 'SLATE', 'SPARE', 'BLEND']
-    const result = chooseBestGuessFromRemaining(remaining, 3, allWords)
+    const result = await chooseBestGuessFromRemaining(remaining, 3, allWords)
 
     // For guess 3, should prefer remaining words
     expect(remaining).toContain(result.word)
@@ -206,8 +206,8 @@ describe('Strategy - getBins Optimization', () => {
 describe('autoPlayWordle - Consistency', () => {
   test('should solve same answer with different starting words', async () => {
     const answer = 'STORK'
-    const result1 = await autoPlayWordle(answer, 'CRATE')
-    const result2 = await autoPlayWordle(answer, 'SLATE')
+    const result1 = await autoPlayWordle(answer, 'CRATE', { silent: true })
+    const result2 = await autoPlayWordle(answer, 'SLATE', { silent: true })
 
     expect(result1.solved).toBe(true)
     expect(result2.solved).toBe(true)
@@ -215,7 +215,7 @@ describe('autoPlayWordle - Consistency', () => {
   })
 
   test('should produce valid keys at each step', async () => {
-    const result = await autoPlayWordle('STORM', 'CRATE')
+    const result = await autoPlayWordle('STORM', 'CRATE', { silent: true })
     const answer = 'STORM'
 
     for (let i = 0; i < result.guesses.length; i++) {
