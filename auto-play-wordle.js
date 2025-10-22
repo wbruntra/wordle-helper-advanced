@@ -23,11 +23,17 @@ const calculateVariance = (binSizes) => {
 
 /**
  * Choose the best guess from remaining words using getBins to maximize separation
+ * Handles guesses 2-6 with appropriate strategies for each
  * @param {Array} remainingWords - Words still possible
  * @param {number} guessNumber - Current guess number (for special logic)
  * @param {Array} allWords - Full word list for strategic guessing
+ * @param {Object} options - Configuration options
+ * @param {string} options.previousGuess - Previous guess (required for guess 2)
+ * @param {string} options.previousEvaluation - Previous evaluation (required for guess 2)
+ * @param {boolean} options.generateFullCache - Generate full cache if missing (for guess 2)
+ * @returns {Promise<Object>} - Best guess choice
  */
-const chooseBestGuessFromRemaining = (remainingWords, guessNumber = 3, allWords = likelyWords) => {
+const chooseBestGuessFromRemaining = async (remainingWords, guessNumber = 3, allWords = likelyWords, options = {}) => {
   if (remainingWords.length === 1) {
     return {
       word: remainingWords[0],
@@ -45,42 +51,65 @@ const chooseBestGuessFromRemaining = (remainingWords, guessNumber = 3, allWords 
     }
   }
   
-  // STRATEGIC LOGIC FOR GUESSES 4 & 5: Prioritize perfect separation, fallback to full list only if needed
+  // STRATEGIC LOGIC FOR GUESS 2: Use database cache or calculate on-demand
+  if (guessNumber === 2) {
+    const { previousGuess, previousEvaluation, generateFullCache = false } = options
+    
+    if (!previousGuess || !previousEvaluation) {
+      throw new Error('Guess 2 requires previousGuess and previousEvaluation in options')
+    }
+    
+    console.log(`   🎯 GUESS 2 STRATEGY: Using cached or calculated optimal separation`)
+    
+    const recommendation = await getOptimalGuess(previousGuess, previousEvaluation, {
+      generateFullCache,
+      silent: true
+    })
+    
+    if (!recommendation) {
+      throw new Error(`No recommendation available for evaluation ${previousEvaluation}`)
+    }
+    
+    return {
+      word: recommendation.recommendation,
+      bins: recommendation.bins,
+      binSizes: recommendation.binSizes,
+      variance: recommendation.distribution || 0,
+      reason: recommendation.reason + (recommendation.cached ? " (cached)" : " (calculated)"),
+      cached: recommendation.cached
+    }
+  }
+  
+  // STRATEGIC LOGIC FOR GUESSES 4 & 5: Single pass to maximize bins with minimum variance
+  // If perfect separation exists, we'll find it naturally and return early; otherwise we optimize distribution
   if ((guessNumber === 4 || guessNumber === 5) && remainingWords.length > 2) {
-    console.log(`   🎯 GUESS ${guessNumber} STRATEGY: Searching for perfect separation among remaining words, then full list if needed`)
+    console.log(`   🎯 GUESS ${guessNumber} STRATEGY: Maximizing bins with optimal distribution (combined single pass)`)
 
     const candidateOrder = [...remainingWords, ...allWords]
     const seenCandidates = new Set()
-
+    let bestChoice = null
+    let maxBins = 0
+    let minVariance = Infinity
+    
     for (const candidate of candidateOrder) {
       if (seenCandidates.has(candidate)) continue
       seenCandidates.add(candidate)
 
       const bins = getBins(candidate, remainingWords, { returnObject: false })
-      const maxBinSize = Math.max(...bins)
-
-      if (maxBinSize === 1) {
-        const sourceLabel = remainingWords.includes(candidate) ? 'remaining words' : 'full word list'
-        console.log(`   ✨ PERFECT SEPARATION FOUND using ${sourceLabel}!`)
-        return {
-          word: candidate,
-          bins: bins.length,
-          binSizes: bins,
-          reason: `PERFECT SEPARATION (${sourceLabel}): Each of ${bins.length} bins contains exactly 1 word`
-        }
-      }
-    }
-
-    // No perfect separation found; fallback to variance optimization
-    console.log(`   ❌ No perfect separation found. Searching for maximum bins with optimal distribution using full word list...`)
-    let bestChoice = null
-    let maxBins = 0
-    let minVariance = Infinity
-    
-    for (const candidate of allWords) {
-      const bins = getBins(candidate, remainingWords, { returnObject: false })
       const numBins = bins.length
       const variance = calculateVariance(bins)
+      
+      // Check for perfect separation: each remaining word gets its own bin
+      if (numBins === remainingWords.length) {
+        console.log(`   ✨ PERFECT SEPARATION FOUND: ${candidate} creates ${numBins} bins!`)
+        return {
+          word: candidate,
+          bins: numBins,
+          binSizes: bins,
+          variance: variance,
+          reason: `PERFECT SEPARATION: Each of ${numBins} remaining words gets its own bin`
+        }
+      }
       
       // Prioritize maximum bins, then minimum variance as tiebreaker
       if (numBins > maxBins || (numBins === maxBins && variance < minVariance)) {
@@ -102,7 +131,7 @@ const chooseBestGuessFromRemaining = (remainingWords, guessNumber = 3, allWords 
     }
   }
   
-  // DEFAULT LOGIC FOR GUESS 3: Use remaining words only
+  // DEFAULT LOGIC FOR GUESS 3 (and 6): Use remaining words only
   let bestChoice = null
   let maxBins = 0
   
@@ -168,25 +197,25 @@ const autoPlayWordle = async (answer, initialGuess = 'CRATE', options = {}) => {
   gameState.remainingWords = getAnswersMatchingKey(initialGuess, firstEvaluation, gameState.remainingWords)
   console.log(`   Remaining: ${gameState.remainingWords.length} words`)
   
-  // GUESS 2: Use unified getOptimalGuess function
+  // GUESS 2: Use consolidated chooseBestGuessFromRemaining function
   console.log(`\n2️⃣ GUESS 2: Determining strategy`)
   
-  // Use the new unified function with option to generate full cache
-  const recommendation = await getOptimalGuess(initialGuess, firstEvaluation, {
-    generateFullCache: options.generateFullCache || false,
-    silent: true
-  })
+  const secondGuessChoice = await chooseBestGuessFromRemaining(
+    gameState.remainingWords,
+    2,
+    likelyWords,
+    {
+      previousGuess: initialGuess,
+      previousEvaluation: firstEvaluation,
+      generateFullCache: options.generateFullCache || false
+    }
+  )
   
-  if (!recommendation) {
-    throw new Error(`No recommendation available for evaluation ${firstEvaluation}`)
-  }
-  
-  const secondGuess = recommendation.recommendation
-  const strategy = recommendation.reason + (recommendation.cached ? " (cached)" : " (calculated)")
+  const secondGuess = secondGuessChoice.word
   const secondEvaluation = evaluateToString(secondGuess, answer)
   console.log(`   Word: ${secondGuess}`)
   console.log(`   Evaluation: ${secondEvaluation}`)
-  console.log(`   Strategy: ${strategy}`)
+  console.log(`   Strategy: ${secondGuessChoice.reason}`)
   
   gameState.guesses.push(secondGuess)
   gameState.evaluations.push(secondEvaluation)
@@ -221,8 +250,8 @@ const autoPlayWordle = async (answer, initialGuess = 'CRATE', options = {}) => {
       console.log(`   Remaining options: ${gameState.remainingWords.join(', ')}`)
     }
     
-    // Choose best guess using getBins strategy
-    const bestChoice = chooseBestGuessFromRemaining(gameState.remainingWords, guessNumber, likelyWords)
+    // Choose best guess using consolidated strategy function
+    const bestChoice = await chooseBestGuessFromRemaining(gameState.remainingWords, guessNumber, likelyWords)
     const currentGuess = bestChoice.word
     const currentEvaluation = evaluateToString(currentGuess, answer)
     
