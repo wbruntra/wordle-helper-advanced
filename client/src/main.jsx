@@ -16,6 +16,10 @@ const router = createHashRouter([
     element: <Wordle />,
   },
   {
+    path: '/test-page',
+    element: <div>Hello, world!</div>,
+  },
+  {
     path: '*',
     element: <Wordle />,
   },

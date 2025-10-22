@@ -4,7 +4,7 @@
  * Module dependencies.
  */
 
-var app = require('../app.js')
+var app = require('../app.ts').default
 var debug = require('debug')('wordle:server')
 var http = require('http')
 

@@ -18,4 +18,4 @@ const decompressedLikelyWords = decompress(likelyWordsCompressed)
 
 console.log('Decompressed likely words matches original:', JSON.stringify(decompressedLikelyWords) === JSON.stringify(likelyWords))
 
-fs.writeFileSync('likely-words-compressed.txt', likelyWordsCompressed)
+// fs.writeFileSync('likely-words-compressed.txt', likelyWordsCompressed)
