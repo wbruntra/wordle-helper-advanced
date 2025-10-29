@@ -233,8 +233,8 @@ export default function AutoPlayPage() {
                       className="border rounded p-3 clickable-card"
                       style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
                       onClick={() => handleGuessClick(step, gameResult.steps)}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#3a3f47')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '')}
                     >
                       <div className="d-flex align-items-center gap-2 mb-2">
                         <Badge bg="secondary" className="me-2">
@@ -385,7 +385,7 @@ export default function AutoPlayPage() {
                       return (
                         <div
                           key={evaluation}
-                          className={`border rounded p-2 ${isActualResult ? 'border-primary bg-light' : ''}`}
+                          className={`border rounded p-2 ${isActualResult ? 'border-primary bg-secondary' : ''}`}
                         >
                           <div className="d-flex align-items-center justify-content-between">
                             <div className="d-flex align-items-center gap-2">

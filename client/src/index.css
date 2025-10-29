@@ -54,6 +54,28 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
+/* Bootstrap secondary background color fixes for dark theme */
+.bg-secondary {
+  background-color: #495057 !important; /* Darker gray for better contrast in dark theme */
+}
+
+.btn-secondary {
+  background-color: #495057 !important;
+  border-color: #495057 !important;
+}
+
+.btn-secondary:hover {
+  background-color: #5a6268 !important;
+  border-color: #5a6268 !important;
+}
+
+/* Ensure text is visible on secondary backgrounds */
+.bg-secondary .text-muted,
+.bg-secondary .text-white,
+.bg-secondary .text-primary {
+  color: rgba(255, 255, 255, 0.87) !important;
+}
+
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
@@ -64,5 +86,20 @@ button:focus-visible {
   }
   button {
     background-color: #f9f9f9;
+  }
+
+  /* Keep lighter secondary for light theme */
+  .bg-secondary {
+    background-color: #6c757d !important;
+  }
+
+  .btn-secondary {
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+  }
+
+  .btn-secondary:hover {
+    background-color: #5a6268 !important;
+    border-color: #545b62 !important;
   }
 }
