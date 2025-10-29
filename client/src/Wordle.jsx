@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { FiSettings } from 'react-icons/fi'
 import { MdOutlineScreenshot } from 'react-icons/md'
 import { AiOutlineBarChart } from 'react-icons/ai'
+import { GiRobotGrab } from 'react-icons/gi'
 import { useSelector, useDispatch } from 'react-redux'
 import { setModalState } from './redux/uiSlice'
 import { addGuess, updateGuess, setGuesses } from './redux/gameSlice'
+import { useNavigate } from 'react-router-dom'
 
 import { evaluateToString } from './advancedUtils'
 // import { commonPlusOfficial, nytAll, nytSolutions } from './wordlists/index'
@@ -42,6 +44,7 @@ function Wordle() {
   const [editKey, setEditKey] = useState('')
 
   const dispatch = useDispatch()
+  const navigate = useNavigate()
   const modals = useSelector(state => state.ui.modals)
   const guesses = useSelector(state => state.game.guesses)
 
@@ -96,6 +99,9 @@ function Wordle() {
       <div className="container mt-3">
         <div className="d-flex justify-content-end">
           <div>
+            <span className="selectable me-2" onClick={() => navigate('/auto-play')} title="Auto-Play">
+              <GiRobotGrab size={'2em'} />
+            </span>
             <span className="selectable me-2" onClick={() => dispatch(setModalState({ modalName: 'upload', isOpen: true }))}>
               <MdOutlineScreenshot size={'2em'} />
             </span>

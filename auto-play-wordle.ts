@@ -9,6 +9,17 @@ interface GameState {
   remainingWords: string[]
   solved: boolean
   totalGuesses: number
+  steps?: Array<{
+    guessNumber: number
+    guess: string
+    evaluation: string
+    bins?: number
+    binSizes?: number[]
+    variance?: number
+    strategy: string
+    remainingWordsPreGuess: number
+    remainingWordsPostGuess: number
+  }>
 }
 
 interface GuessChoice {
@@ -170,7 +181,8 @@ const autoPlayWordle = async (answer: string, initialGuess: string = 'CRATE', op
     evaluations: [],
     remainingWords: [...likelyWords],
     solved: false,
-    totalGuesses: 0
+    totalGuesses: 0,
+    steps: []
   }
 
   // GUESS 1: Initial guess
@@ -178,6 +190,7 @@ const autoPlayWordle = async (answer: string, initialGuess: string = 'CRATE', op
   const firstEvaluation = evaluateToString(initialGuess, answer)
   if (!silent) console.log(`   Evaluation: ${firstEvaluation}`)
 
+  const remainingBefore1 = gameState.remainingWords.length
   gameState.guesses.push(initialGuess)
   gameState.evaluations.push(firstEvaluation)
   gameState.totalGuesses++
@@ -187,16 +200,34 @@ const autoPlayWordle = async (answer: string, initialGuess: string = 'CRATE', op
     if (!silent) console.log(`🎉 SOLVED IN 1 GUESS!`)
     gameState.solved = true
     gameState.remainingWords = [answer]
+    gameState.steps?.push({
+      guessNumber: 1,
+      guess: initialGuess,
+      evaluation: firstEvaluation,
+      strategy: 'Starting word',
+      remainingWordsPreGuess: remainingBefore1,
+      remainingWordsPostGuess: 1,
+    })
     return gameState
   }
 
   // Filter after first guess
   gameState.remainingWords = getAnswersMatchingKey(initialGuess, firstEvaluation, gameState.remainingWords)
   if (!silent) console.log(`   Remaining: ${gameState.remainingWords.length} words`)
+  
+  gameState.steps?.push({
+    guessNumber: 1,
+    guess: initialGuess,
+    evaluation: firstEvaluation,
+    strategy: 'Starting word',
+    remainingWordsPreGuess: remainingBefore1,
+    remainingWordsPostGuess: gameState.remainingWords.length,
+  })
 
   // GUESS 2: Use consolidated chooseBestGuessFromRemaining function
   if (!silent) console.log(`\n2️⃣ GUESS 2: Determining strategy`)
 
+  const remainingBefore2 = gameState.remainingWords.length
   const secondGuessChoice = await chooseBestGuessFromRemaining(
     gameState.remainingWords,
     2,
@@ -224,12 +255,31 @@ const autoPlayWordle = async (answer: string, initialGuess: string = 'CRATE', op
     if (!silent) console.log(`🎉 SOLVED IN 2 GUESSES!`)
     gameState.solved = true
     gameState.remainingWords = [answer]
+    gameState.steps?.push({
+      guessNumber: 2,
+      guess: secondGuess,
+      evaluation: secondEvaluation,
+      bins: secondGuessChoice.bins,
+      strategy: secondGuessChoice.reason,
+      remainingWordsPreGuess: remainingBefore2,
+      remainingWordsPostGuess: 1,
+    })
     return gameState
   }
 
   // Filter after second guess
   gameState.remainingWords = getAnswersMatchingKey(secondGuess, secondEvaluation, gameState.remainingWords)
   if (!silent) console.log(`   Remaining: ${gameState.remainingWords.length} words`)
+  
+  gameState.steps?.push({
+    guessNumber: 2,
+    guess: secondGuess,
+    evaluation: secondEvaluation,
+    bins: secondGuessChoice.bins,
+    strategy: secondGuessChoice.reason,
+    remainingWordsPreGuess: remainingBefore2,
+    remainingWordsPostGuess: gameState.remainingWords.length,
+  })
 
   // GUESS 3+: Use getBins strategy for remaining guesses
   let guessNumber = 3
@@ -248,6 +298,7 @@ const autoPlayWordle = async (answer: string, initialGuess: string = 'CRATE', op
       if (!silent) console.log(`   Remaining options: ${gameState.remainingWords.join(', ')}`)
     }
 
+    const remainingBeforeCurrent = gameState.remainingWords.length
     // Choose best guess using consolidated strategy function
     const bestChoice = await chooseBestGuessFromRemaining(gameState.remainingWords, guessNumber, likelyWords, { silent })
     const currentGuess = bestChoice.word
@@ -266,12 +317,35 @@ const autoPlayWordle = async (answer: string, initialGuess: string = 'CRATE', op
       if (!silent) console.log(`🎉 SOLVED IN ${guessNumber} GUESSES!`)
       gameState.solved = true
       gameState.remainingWords = [answer]
+      gameState.steps?.push({
+        guessNumber,
+        guess: currentGuess,
+        evaluation: currentEvaluation,
+        bins: bestChoice.bins,
+        binSizes: bestChoice.binSizes,
+        variance: bestChoice.variance,
+        strategy: bestChoice.reason,
+        remainingWordsPreGuess: remainingBeforeCurrent,
+        remainingWordsPostGuess: 1,
+      })
       break
     }
 
     // Filter for next iteration
     gameState.remainingWords = getAnswersMatchingKey(currentGuess, currentEvaluation, gameState.remainingWords)
     if (!silent) console.log(`   Remaining: ${gameState.remainingWords.length} words`)
+    
+    gameState.steps?.push({
+      guessNumber,
+      guess: currentGuess,
+      evaluation: currentEvaluation,
+      bins: bestChoice.bins,
+      binSizes: bestChoice.binSizes,
+      variance: bestChoice.variance,
+      strategy: bestChoice.reason,
+      remainingWordsPreGuess: remainingBeforeCurrent,
+      remainingWordsPostGuess: gameState.remainingWords.length,
+    })
 
     guessNumber++
   }

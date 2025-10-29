@@ -6,6 +6,7 @@ import './styles/index.scss'
 
 import Wordle from './Wordle.jsx'
 import TestPage from './TestPage.tsx'
+import AutoPlayPage from './AutoPlayPage.jsx'
 import { RouterProvider, createHashRouter } from 'react-router-dom'
 import { Provider } from 'react-redux'
 import { store } from './redux/store.ts'
@@ -20,6 +21,10 @@ const router = createHashRouter([
   {
     path: '/test-page',
     element: <TestPage />,
+  },
+  {
+    path: '/auto-play',
+    element: <AutoPlayPage />,
   },
   {
     path: '*',

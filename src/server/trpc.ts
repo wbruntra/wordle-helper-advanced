@@ -1,7 +1,7 @@
 import { initTRPC } from '@trpc/server'
 import { z } from 'zod'
 import likelyWords from '@/likely-word-list.json'
-import { chooseBestGuessFromRemaining } from '@/auto-play-wordle'
+import { chooseBestGuessFromRemaining, autoPlayWordle } from '@/auto-play-wordle'
 
 // Utility functions for word evaluation
 const evaluateGuess = (guess: string, answer: string): string => {
@@ -164,6 +164,74 @@ export const appRouter = t.router({
         bins: bestChoice.bins,
         reason: bestChoice.reason,
         error: null,
+      }
+    }),
+
+  // Auto-play Wordle with full solving capability
+  autoPlay: t.procedure
+    .input(
+      z.object({
+        answer: z.string().length(5).toUpperCase(),
+        startingWord: z.string().length(5).toUpperCase().optional(),
+      })
+    )
+    .mutation(async ({ input }): Promise<{
+      solved: boolean
+      totalGuesses: number
+      guesses: string[]
+      evaluations: string[]
+      steps: Array<{
+        guessNumber: number
+        guess: string
+        evaluation: string
+        bins?: number
+        strategy: string
+        remainingWordsPreGuess: number
+        remainingWordsPostGuess: number
+      }>
+      error: string | null
+    }> => {
+      const { answer, startingWord = 'CRATE' } = input
+
+      try {
+        // Call the auto-play function with silent mode
+        const gameState = await autoPlayWordle(answer, startingWord, { silent: true })
+
+        // Use the steps data if available, otherwise transform the game state
+        const steps = gameState.steps || gameState.guesses.map((guess, index) => ({
+          guessNumber: index + 1,
+          guess: guess,
+          evaluation: gameState.evaluations[index],
+          strategy: '',
+          remainingWordsPreGuess: 0,
+          remainingWordsPostGuess: 0,
+        }))
+
+        return {
+          solved: gameState.solved,
+          totalGuesses: gameState.totalGuesses,
+          guesses: gameState.guesses,
+          evaluations: gameState.evaluations,
+          steps: steps as Array<{
+            guessNumber: number
+            guess: string
+            evaluation: string
+            bins?: number
+            strategy: string
+            remainingWordsPreGuess: number
+            remainingWordsPostGuess: number
+          }>,
+          error: null,
+        }
+      } catch (error: any) {
+        return {
+          solved: false,
+          totalGuesses: 0,
+          guesses: [],
+          evaluations: [],
+          steps: [],
+          error: error.message || 'Failed to auto-play Wordle',
+        }
       }
     }),
 })
