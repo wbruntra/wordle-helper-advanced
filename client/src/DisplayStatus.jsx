@@ -171,10 +171,7 @@ function DisplayStatus({
                   <div
                     key={index}
                     className="border rounded p-3"
-                    style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
-                    onClick={() => handleGuessCardClick(guess, index)}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '')}
+                    style={{ transition: 'background-color 0.2s' }}
                   >
                     <div className="d-flex align-items-center gap-2 mb-2">
                       <Badge bg="secondary" className="me-2">
@@ -216,8 +213,14 @@ function DisplayStatus({
                           ✂️ <strong>After:</strong> {remainingAfter.length} words
                         </div>
                       </div>
-                      <div className="mt-2 d-flex gap-2">
-                        <small className="text-primary">🔍 Click for bins</small>
+                      <div className="mt-2 d-flex gap-2 align-items-center">
+                        <small 
+                          className="text-primary" 
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => handleGuessCardClick(guess, index)}
+                        >
+                          🔍 Click for bins
+                        </small>
                         <Button
                           variant="outline-primary"
                           size="sm"
