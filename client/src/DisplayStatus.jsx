@@ -6,7 +6,7 @@ import { BsPencil } from 'react-icons/bs'
 import { TiTimes } from 'react-icons/ti'
 import { useSelector, useDispatch } from 'react-redux'
 import { removeGuess, setGuesses } from './redux/gameSlice'
-import { Badge, Button, Container } from 'react-bootstrap'
+import { Badge, Button, Container, Spinner } from 'react-bootstrap'
 
 import BinsTable from './BinsTable'
 import BinDetailsModal from './BinDetailsModal'
@@ -29,6 +29,7 @@ function DisplayStatus({
   const [clickedGuess, setClickedGuess] = useState(null)
   const [showBinModal, setShowBinModal] = useState(false)
   const [modalGuessData, setModalGuessData] = useState(null)
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
 
   useEffect(() => {
     let appliedGuesses = []
@@ -52,17 +53,23 @@ function DisplayStatus({
       setError('')
     }
 
-    let newWordOrder
-    if (localFiltered.length < 1500) {
-      newWordOrder = orderEntireWordList(localFiltered, {
-        only_filtered: usingOnlyFiltered,
-        startingList,
-      })
+    if (!countOnly && localFiltered.length < 1500) {
+      setIsLoadingSuggestions(true)
+      // Use setTimeout to allow React to render the loading state first
+      setTimeout(() => {
+        const newWordOrder = orderEntireWordList(localFiltered, {
+          only_filtered: usingOnlyFiltered,
+          startingList,
+        })
+        setOrderedWords(newWordOrder)
+        setIsLoadingSuggestions(false)
+      }, 0)
     } else {
-      newWordOrder = localFiltered.map((w) => ({ word: w }))
+      const newWordOrder = localFiltered.map((w) => ({ word: w }))
+      setOrderedWords(newWordOrder)
+      setIsLoadingSuggestions(false)
     }
-    setOrderedWords(newWordOrder)
-  }, [currentGuesses, usingOnlyFiltered, startingList, clickedGuess])
+  }, [currentGuesses, usingOnlyFiltered, startingList, clickedGuess, countOnly])
 
   useEffect(() => {
     if (currentGuesses.length > 0 && showDepth) {
@@ -293,54 +300,63 @@ function DisplayStatus({
 
             {!countOnly && (
               <>
-                {!showDepth && orderedWords.length > 0 && (
+                {isLoadingSuggestions ? (
+                  <div className="text-center py-4">
+                    <Spinner animation="border" role="status" className="me-2" />
+                    <span>Calculating suggestions...</span>
+                  </div>
+                ) : (
                   <>
-                    <p className="text-center">
-                      Showing best{' '}
-                      {usingOnlyFiltered ? 'among filtered' : 'overall (including eliminated)'}{' '}
-                      choices
-                    </p>
-                    <div className="text-center mb-3">
-                      {usingOnlyFiltered ? (
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={() => setUsingOnlyFiltered(false)}
-                        >
-                          Use Full Wordlist
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={() => setUsingOnlyFiltered(true)}
-                        >
-                          Use Only Valid Words
-                        </Button>
-                      )}
-                    </div>
-                    <div className="row justify-content-center mb-3">
-                      <div className="col-10">
-                        <table className="table table-dark table-striped mt-3 w-100">
-                          <thead>
-                            <tr>
-                              <th scope="col">WORD</th>
-                              <th scope="col">CHANCE OF SOLVING</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {orderedWords.slice(0, 10).map((word, i) => (
-                              <tr key={`ordered-${i}`}>
-                                <td>{word.word}</td>
-                                <td>
-                                  {((100 * word.score) / currentFilteredList.length).toFixed(1)}%
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
+                    {!showDepth && orderedWords.length > 0 && (
+                      <>
+                        <p className="text-center">
+                          Showing best{' '}
+                          {usingOnlyFiltered ? 'among filtered' : 'overall (including eliminated)'}{' '}
+                          choices
+                        </p>
+                        <div className="text-center mb-3">
+                          {usingOnlyFiltered ? (
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => setUsingOnlyFiltered(false)}
+                            >
+                              Use Full Wordlist
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => setUsingOnlyFiltered(true)}
+                            >
+                              Use Only Valid Words
+                            </Button>
+                          )}
+                        </div>
+                        <div className="row justify-content-center mb-3">
+                          <div className="col-10">
+                            <table className="table table-dark table-striped mt-3 w-100">
+                              <thead>
+                                <tr>
+                                  <th scope="col">WORD</th>
+                                  <th scope="col">CHANCE OF SOLVING</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {orderedWords.slice(0, 10).map((word, i) => (
+                                  <tr key={`ordered-${i}`}>
+                                    <td>{word.word}</td>
+                                    <td>
+                                      {((100 * word.score) / currentFilteredList.length).toFixed(1)}%
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </>
                 )}
                 <hr style={{ color: 'white' }} />
