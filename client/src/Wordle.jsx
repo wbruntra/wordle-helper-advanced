@@ -7,6 +7,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import { setModalState } from './redux/uiSlice'
 import { addGuess, updateGuess, setGuesses } from './redux/gameSlice'
 import { useNavigate } from 'react-router-dom'
+import { Container, Card, Form, Button, Alert, Row, Col } from 'react-bootstrap'
 
 import { evaluateToString } from './advancedUtils'
 // import { commonPlusOfficial, nytAll, nytSolutions } from './wordlists/index'
@@ -96,16 +97,16 @@ function Wordle() {
 
   return (
     <div>
-      <div className="container mt-3">
-        <div className="d-flex justify-content-end">
+      <Container className="mt-3">
+        <div className="d-flex justify-content-end mb-4">
           <div>
-            <span className="selectable me-2" onClick={() => navigate('/auto-play')} title="Auto-Play">
+            <span className="selectable me-3" onClick={() => navigate('/auto-play')} title="Auto-Play">
               <GiRobotGrab size={'2em'} />
             </span>
-            <span className="selectable me-2" onClick={() => dispatch(setModalState({ modalName: 'upload', isOpen: true }))}>
+            <span className="selectable me-3" onClick={() => dispatch(setModalState({ modalName: 'upload', isOpen: true }))}>
               <MdOutlineScreenshot size={'2em'} />
             </span>
-            <span className="selectable me-2" onClick={() => dispatch(setModalState({ modalName: 'analysis', isOpen: true }))}>
+            <span className="selectable me-3" onClick={() => dispatch(setModalState({ modalName: 'analysis', isOpen: true }))}>
               <AiOutlineBarChart size={'2em'} />
             </span>
             <span className="selectable" onClick={() => dispatch(setModalState({ modalName: 'wordList', isOpen: true }))}>
@@ -113,122 +114,164 @@ function Wordle() {
             </span>
           </div>
         </div>
-      </div>
-      <div className="container text-center">
-        <h1>Wordle Helper</h1>
-        {!guesses.length > 0 && (
-          <>
-            <p>Enter your guesses along with the color-coded response you got from Wordle</p>
-            <p className="text-left">
-              Y → yellow <br />
-              G → green <br />
-              Any other character for a miss
-            </p>
-            <p className="example">
-              Example: {example.word}{' '}
-              <span style={{ fontSize: '1.8em' }} className="arrow">
-                →
-              </span>{' '}
-              {example.key}
-            </p>
-            <div className="mb-4">
-              {word.length < 5 && (
-                <div
-                  onClick={() => {
-                    setShowExample(true)
-                  }}
-                  className="guess selectable"
-                >
-                  <Guess guess={{ word: example.word, key: example.key }} />
-                </div>
-              )}
-            </div>
-          </>
-        )}
+      </Container>
 
-        {/* New Guess Input */}
-        {editingGuessIndex === null && (
-          <div className="row justify-content-center">
-            <form className="mb-3 col-8 col-md-3" onSubmit={handleAddGuess}>
-              <fieldset className="mb-2">
-                <input
-                  className="font-mono form-control"
-                  ref={inputEl}
-                  value={word}
-                  onChange={(e) => {
-                    setWord(e.target.value.toUpperCase())
-                    if (e.target.value.toUpperCase().length === 5 && answerInput.length === 5) {
-                      const newKey = evaluateToString(e.target.value.toUpperCase(), answerInput)
-                      setKey(newKey)
-                    }
-                  }}
-                  placeholder={showExample ? example.word : 'GUESS'}
-                />
-              </fieldset>
-              <fieldset className="mb-3">
-                <input
-                  className="font-mono form-control"
-                  value={key}
-                  onChange={(e) => setKey(e.target.value.toUpperCase())}
-                  placeholder={showExample ? example.key : `response`}
-                />
-              </fieldset>
-              <input
-                className="btn btn-primary"
-                type="submit"
-                value="Add Guess"
-                disabled={
-                  !(word.length === key.length && word.length === currentFilteredList[0].length)
-                }
-              />
-            </form>
-          </div>
-        )}
+      <Container className="text-center">
+        <h1 className="mb-4">Wordle Helper</h1>
 
-        {/* Edit Guess Form */}
-        {editingGuessIndex !== null && (
-          <div className="row justify-content-center">
-            <form className="mb-3 col-8 col-md-3" onSubmit={saveEditedGuess}>
-              <fieldset className="mb-2">
-                <input
-                  className="font-mono form-control"
-                  value={editWord}
-                  onChange={(e) => setEditWord(e.target.value.toUpperCase())}
-                  placeholder="GUESS"
-                />
-              </fieldset>
-              <fieldset className="mb-3">
-                <input
-                  className="font-mono form-control"
-                  value={editKey}
-                  onChange={(e) => setEditKey(e.target.value.toUpperCase())}
-                  placeholder="response"
-                />
-              </fieldset>
-              <div className="d-flex justify-content-between">
-                <button className="btn btn-primary" type="submit">
-                  Save
-                </button>
-                <button className="btn btn-secondary" type="button" onClick={cancelEditing}>
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
+        <Row className="mb-4">
+          <Col lg={6} className="mx-auto">
+            {!guesses.length > 0 && (
+              <Card className="mb-4">
+                <Card.Body>
+                  <Card.Title>How to Use</Card.Title>
+                  <p>Enter your guesses along with the color-coded response you got from Wordle</p>
+                  <p className="text-left small">
+                    <strong>Y</strong> → yellow <br />
+                    <strong>G</strong> → green <br />
+                    <strong>Any other character</strong> → miss
+                  </p>
+                  <p className="example mb-0">
+                    Example: <strong>{example.word}</strong>{' '}
+                    <span style={{ fontSize: '1.2em' }}>→</span>{' '}
+                    <strong>{example.key}</strong>
+                  </p>
+                </Card.Body>
+              </Card>
+            )}
 
-        {error !== '' && (
-          <div>
-            <p className="error">{error}</p>
-          </div>
-        )}
+            {word.length < 5 && !guesses.length > 0 && (
+              <Card className="mb-4 border-info">
+                <Card.Body>
+                  <Card.Title>Example Guess</Card.Title>
+                  <div
+                    onClick={() => {
+                      setShowExample(true)
+                    }}
+                    className="guess selectable"
+                  >
+                    <Guess guess={{ word: example.word, key: example.key }} />
+                  </div>
+                  <small className="text-muted mt-2 d-block">Click to use this example</small>
+                </Card.Body>
+              </Card>
+            )}
+          </Col>
+        </Row>
 
-        <DisplayStatus
-          guesses={guesses}
-          startingList={currentFilteredList}
-          onGuessClick={startEditingGuess}
-        />
-      </div>
+        {/* Input Form Card */}
+        <Row className="mb-4 justify-content-center">
+          <Col lg={6}>
+            <Card>
+              <Card.Body>
+                <Card.Title>{editingGuessIndex === null ? 'Add New Guess' : 'Edit Guess'}</Card.Title>
+
+                {editingGuessIndex === null && (
+                  <Form onSubmit={handleAddGuess}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Your Guess</Form.Label>
+                      <Form.Control
+                        className="font-mono text-uppercase"
+                        value={word}
+                        onChange={(e) => {
+                          setWord(e.target.value.toUpperCase())
+                          if (e.target.value.toUpperCase().length === 5 && answerInput.length === 5) {
+                            const newKey = evaluateToString(e.target.value.toUpperCase(), answerInput)
+                            setKey(newKey)
+                          }
+                        }}
+                        placeholder={showExample ? example.word : 'GUESS'}
+                        maxLength="5"
+                        ref={inputEl}
+                      />
+                    </Form.Group>
+
+                    <Form.Group className="mb-3">
+                      <Form.Label>Response</Form.Label>
+                      <Form.Control
+                        className="font-mono text-uppercase"
+                        value={key}
+                        onChange={(e) => setKey(e.target.value.toUpperCase())}
+                        placeholder={showExample ? example.key : `response`}
+                        maxLength="5"
+                      />
+                      <Form.Text className="text-muted">
+                        Y = yellow, G = green, other = miss
+                      </Form.Text>
+                    </Form.Group>
+
+                    {error !== '' && <Alert variant="danger">{error}</Alert>}
+
+                    <Button
+                      variant="primary"
+                      type="submit"
+                      className="w-100"
+                      disabled={
+                        !(word.length === key.length && word.length === currentFilteredList[0].length)
+                      }
+                    >
+                      Add Guess
+                    </Button>
+                  </Form>
+                )}
+
+                {editingGuessIndex !== null && (
+                  <Form onSubmit={saveEditedGuess}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Guess</Form.Label>
+                      <Form.Control
+                        className="font-mono text-uppercase"
+                        value={editWord}
+                        onChange={(e) => setEditWord(e.target.value.toUpperCase())}
+                        placeholder="GUESS"
+                        maxLength="5"
+                      />
+                    </Form.Group>
+
+                    <Form.Group className="mb-3">
+                      <Form.Label>Response</Form.Label>
+                      <Form.Control
+                        className="font-mono text-uppercase"
+                        value={editKey}
+                        onChange={(e) => setEditKey(e.target.value.toUpperCase())}
+                        placeholder="response"
+                        maxLength="5"
+                      />
+                    </Form.Group>
+
+                    {error !== '' && <Alert variant="danger">{error}</Alert>}
+
+                    <div className="d-flex gap-2">
+                      <Button
+                        variant="primary"
+                        type="submit"
+                        className="flex-grow-1"
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        type="button"
+                        className="flex-grow-1"
+                        onClick={cancelEditing}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </Form>
+                )}
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      </Container>
+
+      <DisplayStatus
+        guesses={guesses}
+        startingList={currentFilteredList}
+        onGuessClick={startEditingGuess}
+      />
+
       <WordListModal
         wordList={wordListName}
         setWordList={setWordListName}
