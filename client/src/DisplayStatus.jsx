@@ -6,9 +6,8 @@ import { BsPencil } from 'react-icons/bs'
 import { TiTimes } from 'react-icons/ti'
 import { useSelector, useDispatch } from 'react-redux'
 import { removeGuess, setGuesses } from './redux/gameSlice'
-import { Card, Badge, Button, Container } from 'react-bootstrap'
+import { Badge, Button, Container } from 'react-bootstrap'
 
-import Guess from './Guess'
 import BinsTable from './BinsTable'
 import BinDetailsModal from './BinDetailsModal'
 
@@ -54,7 +53,7 @@ function DisplayStatus({
     }
 
     let newWordOrder
-    if (localFiltered.length < 500) {
+    if (localFiltered.length < 1500) {
       newWordOrder = orderEntireWordList(localFiltered, {
         only_filtered: usingOnlyFiltered,
         startingList,
@@ -83,6 +82,24 @@ function DisplayStatus({
       setBins(newBins)
     }
   }, [currentGuesses, showDepth, clickedGuess, startingList])
+
+  const getEvaluationColor = (evaluation) => {
+    const colors = []
+    for (let i = 0; i < evaluation.length; i++) {
+      const char = evaluation[i]
+      if (char === 'G') colors.push('success')
+      else if (char === 'Y') colors.push('warning')
+      else colors.push('secondary')
+    }
+    return colors
+  }
+
+  const getColorForEvaluation = (colorBadge) => {
+    if (colorBadge === 'success') return '#28a745'
+    if (colorBadge === 'warning') return '#ffc107'
+    if (colorBadge === 'secondary') return '#6c757d'
+    return '#6c757d'
+  }
 
   const createBinsForGuess = (word) => {
     let localFiltered = startingList.slice()
@@ -151,62 +168,86 @@ function DisplayStatus({
                   : applyGuesses(startingList, currentGuesses.slice(0, index)).length
 
                 return (
-                  <Card
-                    key={`guess-${index}`}
-                    className="border-light"
+                  <div
+                    key={index}
+                    className="border rounded p-3"
                     style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
+                    onClick={() => handleGuessCardClick(guess, index)}
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)')}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '')}
-                    onClick={() => handleGuessCardClick(guess, index)}
                   >
-                    <Card.Body>
-                      <div className="d-flex align-items-center justify-content-between mb-3">
-                        <div className="d-flex align-items-center gap-3">
-                          <Badge bg="secondary">#{index + 1}</Badge>
-                          <div className="selectable">
-                            <Guess guess={guess} />
-                          </div>
+                    <div className="d-flex align-items-center gap-2 mb-2">
+                      <Badge bg="secondary" className="me-2">
+                        #{index + 1}
+                      </Badge>
+                      <div className="d-flex gap-1">
+                        {guess.word.split('').map((letter, letterIndex) => {
+                          const colors = getEvaluationColor(guess.key)
+                          return (
+                            <div
+                              key={letterIndex}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '40px',
+                                height: '40px',
+                                fontSize: '1.2rem',
+                                fontWeight: 'bold',
+                                color: 'white',
+                                backgroundColor: getColorForEvaluation(colors[letterIndex]),
+                                borderRadius: '4px',
+                              }}
+                            >
+                              {letter}
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <code className="ms-auto text-muted">{guess.key}</code>
+                    </div>
+
+                    <div className="text-muted small">
+                      <div className="d-flex gap-3 flex-wrap">
+                        <div>
+                          📊 <strong>Before:</strong> {remainingBefore} words
                         </div>
-                        <div className="d-flex align-items-center gap-3">
-                          <div className="text-end">
-                            <small className="text-muted d-block">Before: {remainingBefore} words</small>
-                            <small className="text-muted d-block">After: {remainingAfter.length} words</small>
-                          </div>
-                          <div className="d-flex gap-2">
-                            <Button
-                              variant="outline-danger"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setError('')
-                                dispatch(removeGuess(index))
-                                if (clickedGuess === guess.word) {
-                                  setClickedGuess(null)
-                                }
-                              }}
-                              title="Delete guess"
-                            >
-                              <TiTimes />
-                            </Button>
-                            <Button
-                              variant="outline-primary"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                onGuessClick(index)
-                              }}
-                              title="Edit guess"
-                            >
-                              <BsPencil />
-                            </Button>
-                          </div>
+                        <div>
+                          ✂️ <strong>After:</strong> {remainingAfter.length} words
                         </div>
                       </div>
-                      <div className="text-center small text-primary" style={{ cursor: 'pointer' }}>
-                        🔍 Click to see bin details
+                      <div className="mt-2 d-flex gap-2">
+                        <small className="text-primary">🔍 Click for bins</small>
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onGuessClick(index)
+                          }}
+                          title="Edit guess"
+                          className="ms-auto"
+                        >
+                          <BsPencil size={14} /> Edit
+                        </Button>
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setError('')
+                            dispatch(removeGuess(index))
+                            if (clickedGuess === guess.word) {
+                              setClickedGuess(null)
+                            }
+                          }}
+                          title="Delete guess"
+                        >
+                          <TiTimes size={14} /> Delete
+                        </Button>
                       </div>
-                    </Card.Body>
-                  </Card>
+                    </div>
+                  </div>
                 )
               })}
             </div>
