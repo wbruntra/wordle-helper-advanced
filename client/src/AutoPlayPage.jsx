@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { Container, Form, Button, Alert, Spinner, Card, Badge, Row, Col } from 'react-bootstrap'
+import { Container, Form, Button, Alert, Spinner, Card, Badge, Row, Col, Modal } from 'react-bootstrap'
 import { useNavigate } from 'react-router-dom'
 import { FiArrowLeft } from 'react-icons/fi'
 import { trpc } from './trpc'
+import { getBins, applyGuesses } from './advancedUtils'
+import wordList from './wordlists/likely-word-list.json'
 
 export default function AutoPlayPage() {
   const navigate = useNavigate()
@@ -10,6 +12,9 @@ export default function AutoPlayPage() {
   const [startingWord, setStartingWord] = useState('')
   const [error, setError] = useState('')
   const [gameResult, setGameResult] = useState(null)
+  const [selectedGuess, setSelectedGuess] = useState(null)
+  const [showBinModal, setShowBinModal] = useState(false)
+  const [binsData, setBinsData] = useState(null)
 
   // Use tRPC mutation hook
   const autoPlayMutation = trpc.autoPlay.useMutation({
@@ -80,6 +85,32 @@ export default function AutoPlayPage() {
       else colors.push('secondary')
     }
     return colors
+  }
+
+  const handleGuessClick = (step, allSteps) => {
+    // Get all previous guesses (excluding current one)
+    const previousGuesses = allSteps
+      .filter(s => s.guessNumber < step.guessNumber)
+      .map(s => ({
+        word: s.guess,
+        key: s.evaluation
+      }))
+
+    // Apply previous guesses to get the remaining words before this guess
+    let remainingWords = wordList
+    if (previousGuesses.length > 0) {
+      remainingWords = applyGuesses(wordList, previousGuesses)
+    }
+
+    // Calculate bins for this guess
+    const bins = getBins(step.guess, remainingWords, {
+      returnObject: true,
+      showMatches: true
+    })
+
+    setSelectedGuess(step)
+    setBinsData(bins)
+    setShowBinModal(true)
   }
 
   return (
@@ -197,7 +228,14 @@ export default function AutoPlayPage() {
                   const colors = getEvaluationColor(step.evaluation)
 
                   return (
-                    <div key={index} className="border rounded p-3">
+                    <div
+                      key={index}
+                      className="border rounded p-3 clickable-card"
+                      style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
+                      onClick={() => handleGuessClick(step, gameResult.steps)}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = ''}
+                    >
                       <div className="d-flex align-items-center gap-2 mb-2">
                         <Badge bg="secondary" className="me-2">
                           #{step.guessNumber}
@@ -225,7 +263,7 @@ export default function AutoPlayPage() {
                         </div>
                         <code className="ms-auto text-muted">{step.evaluation}</code>
                       </div>
-                      
+
                       <div className="text-muted small">
                         <div className="mb-2">
                           <strong>Strategy:</strong> {step.strategy}
@@ -242,6 +280,9 @@ export default function AutoPlayPage() {
                               📦 <strong>Bins:</strong> {step.bins}
                             </div>
                           )}
+                        </div>
+                        <div className="mt-2 text-primary">
+                          <small>🔍 Click to see bin details</small>
                         </div>
                       </div>
                     </div>
@@ -266,6 +307,164 @@ export default function AutoPlayPage() {
           </Card.Body>
         </Card>
       )}
+
+      {/* Bin Details Modal */}
+      <Modal
+        show={showBinModal}
+        onHide={() => {
+          setShowBinModal(false)
+          setSelectedGuess(null)
+          setBinsData(null)
+        }}
+        size="lg"
+        scrollable
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>
+            Bin Details for Guess #{selectedGuess?.guessNumber}: {selectedGuess?.guess}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedGuess && binsData && (
+            <>
+              <div className="mb-4">
+                <h6>Guess Information</h6>
+                <div className="d-flex align-items-center gap-2 mb-3">
+                  <Badge bg="secondary">#{selectedGuess.guessNumber}</Badge>
+                  <div className="d-flex gap-1">
+                    {selectedGuess.guess.split('').map((letter, letterIndex) => {
+                      const colors = getEvaluationColor(selectedGuess.evaluation)
+                      return (
+                        <div
+                          key={letterIndex}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '35px',
+                            height: '35px',
+                            fontSize: '1rem',
+                            fontWeight: 'bold',
+                            color: 'white',
+                            backgroundColor: getColorForEvaluation(colors[letterIndex]),
+                            borderRadius: '4px',
+                          }}
+                        >
+                          {letter}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <code className="ms-auto">{selectedGuess.evaluation}</code>
+                </div>
+                <div className="text-muted small">
+                  <div><strong>Strategy:</strong> {selectedGuess.strategy}</div>
+                  <div className="mt-1">
+                    <strong>Words before this guess:</strong> {selectedGuess.remainingWordsPreGuess} |
+                    <strong> Words after:</strong> {selectedGuess.remainingWordsPostGuess}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h6>Bin Distribution</h6>
+                <p className="text-muted small mb-3">
+                  Click on any evaluation pattern to see the words that would produce that pattern.
+                </p>
+                <div className="d-flex flex-column gap-2">
+                  {Object.entries(binsData)
+                    .sort(([keyA, valA], [keyB, valB]) => {
+                      const countA = Array.isArray(valA) ? valA.length : valA
+                      const countB = Array.isArray(valB) ? valB.length : valB
+                      return countB - countA
+                    })
+                    .map(([evaluation, words]) => {
+                      const count = Array.isArray(words) ? words.length : words
+                      const isActualResult = evaluation === selectedGuess.evaluation.replace(/[^GY]/g, '-')
+
+                      return (
+                        <div
+                          key={evaluation}
+                          className={`border rounded p-2 ${isActualResult ? 'border-primary bg-light' : ''}`}
+                        >
+                          <div className="d-flex align-items-center justify-content-between">
+                            <div className="d-flex align-items-center gap-2">
+                              <div className="d-flex gap-1">
+                                {evaluation.split('').map((char, index) => (
+                                  <div
+                                    key={index}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      width: '25px',
+                                      height: '25px',
+                                      fontSize: '0.8rem',
+                                      fontWeight: 'bold',
+                                      color: 'white',
+                                      backgroundColor: getColorForEvaluation(
+                                        char === 'G' ? 'success' : char === 'Y' ? 'warning' : 'secondary'
+                                      ),
+                                      borderRadius: '3px',
+                                    }}
+                                  >
+                                    {char}
+                                  </div>
+                                ))}
+                              </div>
+                              <Badge
+                                bg={isActualResult ? 'primary' : 'secondary'}
+                                className="ms-2"
+                              >
+                                {count} words
+                              </Badge>
+                              {isActualResult && (
+                                <Badge bg="success" className="ms-1">Actual Result</Badge>
+                              )}
+                            </div>
+                            <small className="text-muted">
+                              {count > 0 && `${((count / selectedGuess.remainingWordsPreGuess) * 100).toFixed(1)}%`}
+                            </small>
+                          </div>
+
+                          {Array.isArray(words) && words.length > 0 && words.length <= 20 && (
+                            <div className="mt-2">
+                              <small className="text-muted">Words: </small>
+                              <small className="font-monospace">
+                                {words.join(', ')}
+                              </small>
+                            </div>
+                          )}
+
+                          {Array.isArray(words) && words.length > 20 && (
+                            <div className="mt-2">
+                              <small className="text-muted">First 20 words: </small>
+                              <small className="font-monospace">
+                                {words.slice(0, 20).join(', ')}...
+                              </small>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                </div>
+              </div>
+            </>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setShowBinModal(false)
+              setSelectedGuess(null)
+              setBinsData(null)
+            }}
+          >
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </Container>
   )
 }
