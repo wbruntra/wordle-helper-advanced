@@ -7,6 +7,8 @@ import path from 'path'
 import s3 from './bunS3'
 import config from './config'
 import { getGuesses } from './getGuesses'
+import { createExpressMiddleware } from '@trpc/server/adapters/express'
+import { appRouter, createTRPCContext } from './src/server/trpc'
 
 // Extended Request interface to include requestId
 interface ExtendedRequest extends Request {
@@ -46,6 +48,15 @@ app.use((req: ExtendedRequest, res: Response, next: NextFunction) => {
   req.requestId = Date.now().toString(36) + Math.random().toString(36).substr(2)
   next()
 })
+
+// tRPC middleware
+app.use(
+  '/api/trpc',
+  createExpressMiddleware({
+    router: appRouter,
+    createContext: createTRPCContext,
+  })
+)
 
 app.use('/', require('./routes/screenshot').default)
 

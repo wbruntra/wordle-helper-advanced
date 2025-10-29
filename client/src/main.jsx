@@ -5,10 +5,12 @@ import './styles/bootstrap.scss'
 import './styles/index.scss'
 
 import Wordle from './Wordle.jsx'
+import TestPage from './TestPage.tsx'
 import { RouterProvider, createHashRouter } from 'react-router-dom'
 import { Provider } from 'react-redux'
 import { store } from './redux/store.ts'
 import { ThemeProvider } from 'react-bootstrap'
+import { TRPCProvider } from './TRPCProvider.tsx'
 
 const router = createHashRouter([
   {
@@ -17,7 +19,7 @@ const router = createHashRouter([
   },
   {
     path: '/test-page',
-    element: <div>Hello, world!</div>,
+    element: <TestPage />,
   },
   {
     path: '*',
@@ -29,7 +31,9 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Provider store={store}>
       <ThemeProvider theme="dark">
-        <RouterProvider router={router} />
+        <TRPCProvider>
+          <RouterProvider router={router} />
+        </TRPCProvider>
       </ThemeProvider>
     </Provider>
   </StrictMode>,

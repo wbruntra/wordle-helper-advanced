@@ -29,6 +29,7 @@
     "typeRoots": ["./node_modules/@types", "./src/types"],
     "baseUrl": "./",
     "paths": {
+      "@/*": ["*"],
       "@config": ["config.js"],
       "@secrets": ["secrets.js"],
       "@db_connection": ["db_connect.js"],
