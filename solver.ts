@@ -1,6 +1,7 @@
 import likelyWords from './likely-word-list.json'
 import { getBins, getAnswersMatchingKey } from '@advancedUtils'
 import { SecondGuessCacheDB } from './database.js'
+import inquirer from 'inquirer'
 
 // Type definitions
 interface CacheEntry {
@@ -615,31 +616,332 @@ const calculateSingleEvaluation = async (initialGuess: string, evaluation: strin
 }
 
 /**
- * Ensure cache exists for the given initial guess, create if needed
+ * Build cache incrementally - only compute missing evaluation patterns
+ * Preserves already-computed values
  */
-const ensureCache = async (initialGuess: string): Promise<void> => {
+const buildCacheIncremental = async (initialGuess: string): Promise<void> => {
+  console.log(`\n� Building cache incrementally for ${initialGuess}`)
+  
+  const allKeys = getAllKeys()
+  console.log(`📋 Total possible patterns: ${allKeys.length}`)
+
+  // Load existing cache if it exists
+  let existingCache: Cache = {}
   const cacheExists = await cacheDB.cacheExists(initialGuess)
-
-  if (!cacheExists) {
-    console.log(`\n📊 Creating cache for initial guess: ${initialGuess}`)
-    console.log(`This may take about 90 seconds...`)
-
-    const cache = preComputeSecondGuess({
-      initialGuess,
-      likelyWords
-    })
-    await cacheDB.saveCache(initialGuess, cache)
-
-    console.log(`✅ Cache created and saved to database`)
+  
+  if (cacheExists) {
+    existingCache = await cacheDB.loadCache(initialGuess)
+    const existingCount = Object.keys(existingCache).length
+    console.log(`📦 Existing cache: ${existingCount} patterns`)
   } else {
-    console.log(`✅ Cache found for initial guess: ${initialGuess}`)
+    console.log(`📦 No existing cache found, starting from scratch`)
+  }
+
+  // Find missing keys
+  const missingKeys = allKeys.filter(key => !existingCache[key])
+  console.log(`❓ Missing patterns: ${missingKeys.length}`)
+
+  if (missingKeys.length === 0) {
+    console.log(`✅ Cache is complete! No missing patterns.`)
+    return
+  }
+
+  // Calculate only the missing patterns
+  console.log(`\n⏱️  Computing ${missingKeys.length} missing patterns...`)
+  const startTime = Date.now()
+
+  const newCacheEntries: Cache = {}
+
+  for (let i = 0; i < missingKeys.length; i++) {
+    const key = missingKeys[i]
+
+    if (i % 10 === 0 || i < 20) {
+      const elapsed = (Date.now() - startTime) / 1000
+      const rate = i / elapsed || 0
+      const eta = rate > 0 ? (missingKeys.length - i) / rate : 0
+      console.log(`Processing key ${i + 1}/${missingKeys.length}: ${key} (${elapsed.toFixed(1)}s elapsed, ETA: ${eta.toFixed(1)}s)`)
+    }
+
+    // Filter likelyWords to answers that match this key pattern
+    const filteredAnswers = getAnswersMatchingKey(initialGuess, key, likelyWords)
+
+    if (filteredAnswers.length === 0) {
+      newCacheEntries[key] = {
+        filteredAnswersCount: 0,
+        bestGuesses: [],
+        maxBins: 0,
+        bestDistribution: Infinity
+      }
+      continue
+    }
+
+    if (filteredAnswers.length === 1) {
+      newCacheEntries[key] = {
+        filteredAnswersCount: 1,
+        bestGuesses: [{
+          word: filteredAnswers[0],
+          bins: 1,
+          distribution: 0
+        }],
+        maxBins: 1,
+        bestDistribution: 0
+      }
+      continue
+    }
+
+    // First pass: find the maximum number of bins
+    const perfectSeparation = filteredAnswers.length
+    let maxBins = 0
+    const wordBinCounts: Array<{ word: string; bins: number; binSizes: number[] }> = []
+    let foundPerfectSeparation = false
+
+    for (const potentialGuess of likelyWords) {
+      const bins = getBins(potentialGuess, filteredAnswers, { returnObject: false }) as number[]
+      const numBins = bins.length
+
+      wordBinCounts.push({
+        word: potentialGuess,
+        bins: numBins,
+        binSizes: bins
+      })
+
+      if (numBins > maxBins) {
+        maxBins = numBins
+      }
+
+      if (numBins === perfectSeparation) {
+        foundPerfectSeparation = true
+        break
+      }
+    }
+
+    // Second pass: among words with maxBins, find the best distribution
+    const candidateWordsForSecondPass = foundPerfectSeparation
+      ? wordBinCounts.filter(item => item.bins === perfectSeparation)
+      : wordBinCounts.filter(item => item.bins === maxBins)
+
+    let bestDistribution = Infinity
+    let bestGuesses: BestGuess[] = []
+
+    candidateWordsForSecondPass.forEach(candidate => {
+      const variance = foundPerfectSeparation
+        ? 0
+        : (() => {
+          const mean = filteredAnswers.length / candidate.bins
+          return candidate.binSizes.reduce((sum, binSize) => sum + Math.pow(binSize - mean, 2), 0) / candidate.bins
+        })()
+
+      if (variance < bestDistribution) {
+        bestDistribution = variance
+        bestGuesses = [{
+          word: candidate.word,
+          bins: candidate.bins,
+          distribution: variance
+        }]
+      } else if (variance === bestDistribution && bestGuesses.length === 0) {
+        bestGuesses.push({
+          word: candidate.word,
+          bins: candidate.bins,
+          distribution: variance
+        })
+      }
+    })
+
+    newCacheEntries[key] = {
+      filteredAnswersCount: filteredAnswers.length,
+      bestGuesses: bestGuesses,
+      maxBins: maxBins,
+      bestDistribution: bestDistribution
+    }
+  }
+
+  const totalTime = (Date.now() - startTime) / 1000
+  console.log(`\n✅ Computation completed in ${totalTime.toFixed(1)}s for ${missingKeys.length} patterns`)
+
+  // Merge with existing cache
+  const mergedCache = { ...existingCache, ...newCacheEntries }
+  console.log(`💾 Saving merged cache with ${Object.keys(mergedCache).length} total entries...`)
+  
+  await cacheDB.saveCache(initialGuess, mergedCache)
+
+  // Verify
+  const verifiedCache = await cacheDB.loadCache(initialGuess)
+  const finalCount = Object.keys(verifiedCache).length
+  console.log(`✅ Cache updated successfully: ${finalCount}/${allKeys.length} entries`)
+
+  if (finalCount < allKeys.length) {
+    console.log(`   ⚠️  Still missing ${allKeys.length - finalCount} patterns`)
+  } else {
+    console.log(`   🎉 Cache is now complete!`)
   }
 }
 
-// Main execution function for CLI usage
+// Main execution function with interactive menu
 const run = async (): Promise<void> => {
   const args = process.argv.slice(2)
 
+  // If arguments are provided, use the old CLI mode for backwards compatibility
+  if (args.length > 0) {
+    await runLegacyCLI(args)
+    return
+  }
+
+  // Interactive menu mode
+  console.log(`
+╔═══════════════════════════════════════════╗
+║  🎯 WORDLE SOLVER CACHE MANAGER 🎯        ║
+║                                           ║
+║  Build and manage optimal second guess    ║
+║  caches for Wordle gameplay               ║
+╚═══════════════════════════════════════════╝
+`)
+
+  let continueLoop = true
+
+  while (continueLoop) {
+    const { mainAction } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'mainAction',
+        message: 'What would you like to do?',
+        choices: [
+          { name: '🔨 Build cache incrementally (recommended)', value: 'build' },
+          { name: '🔄 Rebuild cache from scratch', value: 'rebuild' },
+          { name: '📊 Check cache status', value: 'check' },
+          { name: '❌ Exit', value: 'exit' }
+        ]
+      }
+    ])
+
+    if (mainAction === 'exit') {
+      console.log('\n👋 Goodbye!')
+      continueLoop = false
+      break
+    }
+
+    // Get the initial guess word
+    const { initialGuess } = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'initialGuess',
+        message: 'Enter a 5-letter starting word (e.g., SLATE, CRATE, STARE):',
+        default: 'SLATE',
+        validate: (value: string) => {
+          const val = value.toUpperCase()
+          if (val.length !== 5 || !/^[A-Z]+$/.test(val)) {
+            return '❌ Must be exactly 5 letters (A-Z only)'
+          }
+          return true
+        },
+        transformer: (value: string) => value.toUpperCase()
+      }
+    ])
+
+    try {
+      switch (mainAction) {
+        case 'build':
+          console.log()
+          await buildCacheIncremental(initialGuess)
+          break
+
+        case 'rebuild':
+          const { confirmRebuild } = await inquirer.prompt([
+            {
+              type: 'confirm',
+              name: 'confirmRebuild',
+              message: `⚠️  This will delete and rebuild the entire cache for ${initialGuess}. Continue?`,
+              default: false
+            }
+          ])
+
+          if (confirmRebuild) {
+            console.log()
+            console.log(`🔄 Force rebuilding complete cache for ${initialGuess}...`)
+            console.log(`⏱️  This will take about 90 seconds...`)
+            console.log(`🗑️  Deleting any existing cache data first...`)
+
+            await cacheDB.deleteCache(initialGuess)
+
+            const cache = preComputeSecondGuess({
+              initialGuess,
+              likelyWords
+            })
+
+            console.log(`💾 Saving ${Object.keys(cache).length} cache entries to database...`)
+            await cacheDB.saveCache(initialGuess, cache)
+
+            const verifyExists = await cacheDB.cacheExists(initialGuess)
+            const verifiedCache = await cacheDB.loadCache(initialGuess)
+            const entriesCount = Object.keys(verifiedCache).length
+
+            if (verifyExists && entriesCount > 0) {
+              console.log(`✅ Cache rebuilt successfully with ${entriesCount} entries`)
+            } else {
+              console.log(`⚠️  WARNING: Cache save verification failed!`)
+            }
+          } else {
+            console.log('\n⏭️  Rebuild cancelled')
+          }
+          break
+
+        case 'check':
+          console.log()
+          console.log(`🔍 Checking cache status for ${initialGuess}...`)
+          const exists = await cacheDB.cacheExists(initialGuess)
+
+          if (exists) {
+            const cache = await cacheDB.loadCache(initialGuess)
+            const cacheSize = Object.keys(cache).length
+            const totalPossibleKeys = 243
+
+            console.log(`\n✅ Cache exists with ${cacheSize}/${totalPossibleKeys} entries`)
+
+            if (cacheSize < totalPossibleKeys) {
+              console.log(`⚠️  Cache is incomplete (missing ${totalPossibleKeys - cacheSize} patterns)`)
+              console.log(`💡 Run "Build cache incrementally" to fill in missing patterns`)
+            } else {
+              console.log(`🎉 Cache is complete!`)
+            }
+
+            // Show a few sample entries
+            const samples = Object.entries(cache).slice(0, 5)
+            if (samples.length > 0) {
+              console.log(`\n📋 Sample entries:`)
+              samples.forEach(([key, data]: any) => {
+                console.log(`   ${key}: ${data.filteredAnswersCount} answers → "${data.bestGuesses[0].word}" (${data.bestGuesses[0].bins} bins)`)
+              })
+            }
+          } else {
+            console.log(`❌ No cache found for ${initialGuess}`)
+          }
+          break
+      }
+    } catch (error: any) {
+      console.error('\n❌ Error:', (error as Error).message)
+    }
+
+    // Ask if user wants to continue
+    console.log()
+    const { continueMenu } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'continueMenu',
+        message: 'Would you like to continue?',
+        default: true
+      }
+    ])
+
+    continueLoop = continueMenu
+  }
+
+  console.log('\n✅ Done!')
+  process.exit(0)
+}
+
+/**
+ * Legacy CLI mode - maintains backwards compatibility with command-line arguments
+ */
+const runLegacyCLI = async (args: string[]): Promise<void> => {
   if (args.length === 0) {
     console.log(`
 🎯 WORDLE SOLVER CACHE GENERATOR
@@ -650,15 +952,32 @@ This script generates or manages solver caches for optimal Wordle gameplay.
 Usage: node solver.mjs <command> [options]
 
 Commands:
-  ensure <initial_guess>    Create cache for initial guess if it doesn't exist
-  DUMMY <initial_guess>     Generate cache for initial guess (alias for ensure)
+  build <initial_guess>        Build cache incrementally - only compute missing patterns
+  ensure <initial_guess>       Alias for build command
+  rebuild <initial_guess>      Force complete rebuild of cache (deletes existing data)
+  check <initial_guess>        Check if cache exists and display its contents
+  DUMMY <initial_guess>        Alias for build command
 
 Examples:
-  node solver.mjs ensure CRATE
-  node solver.mjs DUMMY SLATE
-  node solver.mjs ensure TRACE
+  node solver.mjs build CRATE     # Only computes missing patterns (recommended!)
+  node solver.mjs rebuild SLATE   # Force full rebuild from scratch
+  node solver.mjs check CRATE     # Display cache status and contents
 
-⚠️  Cache generation takes about 90 seconds for each starting word.
+Or run with no arguments for interactive menu:
+  node solver.mjs
+
+📊 What gets cached:
+  - All 243 possible evaluation patterns (3^5 combinations of -, G, Y)
+  - Optimal second guess word for each pattern
+  - Number of bins and distribution variance
+
+💡 Recommended workflow:
+  1. Use "build YOURWORD" to incrementally build the cache
+  2. Use "check YOURWORD" to see progress
+  3. Run "build YOURWORD" again to fill in any missing patterns
+  4. Use "rebuild YOURWORD" only if you need a completely fresh cache
+
+⚠️  Cache generation takes about 90 seconds for each starting word when computing all 243 patterns.
 `)
     process.exit(0)
   }
@@ -676,13 +995,68 @@ Examples:
     switch (command) {
       case 'ensure':
       case 'dummy':
-        await ensureCache(initialGuess)
+      case 'build':
+        await buildCacheIncremental(initialGuess)
         console.log(`✅ Cache operation completed for ${initialGuess}`)
+        break
+
+      case 'rebuild':
+        console.log(`\n🔄 Force rebuilding complete cache for ${initialGuess}...`)
+        console.log(`⏱️  This will take about 90 seconds...`)
+        console.log(`🗑️  Deleting any existing cache data first...`)
+
+        await cacheDB.deleteCache(initialGuess)
+
+        const cache = preComputeSecondGuess({
+          initialGuess,
+          likelyWords
+        })
+
+        console.log(`💾 Saving ${Object.keys(cache).length} cache entries to database...`)
+        await cacheDB.saveCache(initialGuess, cache)
+
+        const verifyExists = await cacheDB.cacheExists(initialGuess)
+        const verifiedCache = await cacheDB.loadCache(initialGuess)
+        const entriesCount = Object.keys(verifiedCache).length
+
+        if (verifyExists && entriesCount > 0) {
+          console.log(`✅ Cache rebuilt successfully with ${entriesCount} entries`)
+        } else {
+          console.log(`⚠️  WARNING: Cache save verification failed!`)
+        }
+        break
+
+      case 'check':
+        console.log(`\n🔍 Checking cache status for ${initialGuess}...`)
+        const exists = await cacheDB.cacheExists(initialGuess)
+
+        if (exists) {
+          const checkCache = await cacheDB.loadCache(initialGuess)
+          const cacheSize = Object.keys(checkCache).length
+          const totalPossibleKeys = 243
+          console.log(`✅ Cache exists with ${cacheSize}/${totalPossibleKeys} entries`)
+
+          if (cacheSize < totalPossibleKeys) {
+            console.log(`   ⚠️  Cache is incomplete! Expected ${totalPossibleKeys} entries.`)
+            console.log(`   💡 Run "build ${initialGuess}" to generate the complete cache.`)
+          }
+
+          // Show a few sample entries
+          const samples = Object.entries(checkCache).slice(0, 5)
+          if (samples.length > 0) {
+            console.log(`\n📋 Sample entries:`)
+            samples.forEach(([key, data]: any) => {
+              console.log(`   ${key}: ${data.filteredAnswersCount} answers → "${data.bestGuesses[0].word}" (${data.bestGuesses[0].bins} bins)`)
+            })
+          }
+        } else {
+          console.log(`❌ No cache found for ${initialGuess}`)
+        }
         break
 
       default:
         console.log(`❌ Unknown command: ${command}`)
-        console.log('Use "ensure" or "DUMMY" followed by a 5-letter word')
+        console.log('Use "build", "rebuild", "check", "ensure", or "DUMMY" followed by a 5-letter word')
         process.exit(1)
     }
   } catch (error: any) {
@@ -692,7 +1066,7 @@ Examples:
 }
 
 // Export the main functions for use in other modules
-export { ensureCache, getOptimalGuess, findBestGuessSinglePass }
+export { buildCacheIncremental, getOptimalGuess, findBestGuessSinglePass }
 
 // Run if this file is executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {

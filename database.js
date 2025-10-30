@@ -88,7 +88,18 @@ export class SecondGuessCacheDB {
       .count('* as count')
       .first()
 
-    return count.count > 0
+    const exists = count && count.count > 0
+    console.log(`  [DB] Checking cache for ${initialGuess}: count=${count?.count || 0}, exists=${exists}`)
+    return exists
+  }
+
+  async deleteCache(initialGuess) {
+    const deleted = await this.db('second_guess_cache')
+      .where('initial_guess', initialGuess)
+      .del()
+
+    console.log(`  [DB] Deleted ${deleted} entries for ${initialGuess}`)
+    return deleted
   }
 
   async getCacheStats() {
