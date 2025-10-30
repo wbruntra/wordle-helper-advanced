@@ -820,7 +820,7 @@ const run = async (): Promise<void> => {
     }
 
     // Get the initial guess word
-    const { initialGuess } = await inquirer.prompt([
+    const rawInput = await inquirer.prompt([
       {
         type: 'input',
         name: 'initialGuess',
@@ -836,6 +836,9 @@ const run = async (): Promise<void> => {
         transformer: (value: string) => value.toUpperCase()
       }
     ])
+    
+    // Normalize to uppercase
+    const initialGuess = rawInput.initialGuess.toUpperCase()
 
     try {
       switch (mainAction) {
