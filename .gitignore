@@ -31,3 +31,5 @@ test_db_data_audience_reports.json
 .aider*
 
 eng.traineddata
+
+wordle.sqlite3
