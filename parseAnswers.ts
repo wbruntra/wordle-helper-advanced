@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { load } from "cheerio";
-import knex from "knex";
+import db from "./db_connect.js";
 
 interface WordleAnswer {
   wordleNumber: number;
@@ -65,7 +65,11 @@ function parseAnswersHtml(htmlPath: string): WordleAnswer[] {
 
       // If we got "Reveal" (which means the answer is hidden), try to get it from a hidden span
       if (word === "Reveal" || word.includes("Reveal")) {
-        const hiddenSpan = $(cells[2]).find("span[style*='display: none']");
+        // Look for spans with display:none or display: none
+        let hiddenSpan = $(cells[2]).find("span[style*='display:none']");
+        if (hiddenSpan.length === 0) {
+          hiddenSpan = $(cells[2]).find("span[style*='display: none']");
+        }
         if (hiddenSpan.length > 0) {
           word = hiddenSpan.text().trim();
         }
@@ -110,15 +114,6 @@ async function main() {
 
   // Sort by wordle number (descending to get most recent first)
   answers.sort((a, b) => b.wordleNumber - a.wordleNumber);
-
-  // Initialize database connection
-  const db = knex({
-    client: "sqlite3",
-    connection: {
-      filename: path.join(process.cwd(), "wordle.sqlite3"),
-    },
-    useNullAsDefault: true,
-  });
 
   try {
     // Get existing dates from database to avoid duplicates

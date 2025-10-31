@@ -65,5 +65,24 @@ if ! cd "$SCRIPT_DIR" && bun parseAnswers.ts "$TEMP_HTML"; then
     exit 1
 fi
 
-log_success "Wordle answers database updated successfully"
+# Step 3: Verify the database was actually updated
+log "Verifying database update..."
+VERIFY_RESULT=$(cd "$SCRIPT_DIR" && bun -e "
+  const db = require('./db_connect.js');
+  const count = await db('answer_history').count('* as total').first();
+  const recent = await db('answer_history').select('date', 'word').orderBy('date', 'desc').first();
+  console.log('ROWS:' + count.total);
+  console.log('RECENT:' + recent.date + '=' + recent.word);
+  await db.destroy();
+" 2>/dev/null)
+
+ROW_COUNT=$(echo "$VERIFY_RESULT" | grep "ROWS:" | cut -d':' -f2)
+RECENT_ENTRY=$(echo "$VERIFY_RESULT" | grep "RECENT:" | cut -d':' -f2)
+
+if [ -z "$ROW_COUNT" ] || [ "$ROW_COUNT" -eq 0 ]; then
+    log_error "Database verification failed: No rows found in answer_history table"
+    exit 1
+fi
+
+log_success "Database verified: $ROW_COUNT rows, most recent: $RECENT_ENTRY"
 exit 0
