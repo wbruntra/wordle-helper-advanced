@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Container, Form, Button, Alert, Spinner, Card, Badge, Row, Col, Modal } from 'react-bootstrap'
 import { useNavigate } from 'react-router-dom'
 import { FiArrowLeft } from 'react-icons/fi'
@@ -15,6 +15,7 @@ export default function AutoPlayPage() {
   const [selectedGuess, setSelectedGuess] = useState(null)
   const [showBinModal, setShowBinModal] = useState(false)
   const [binsData, setBinsData] = useState(null)
+  const [recentAnswers, setRecentAnswers] = useState([])
 
   // Use tRPC mutation hook
   const autoPlayMutation = trpc.autoPlay.useMutation({
@@ -30,6 +31,19 @@ export default function AutoPlayPage() {
       console.error('Error:', err)
     },
   })
+
+  // Fetch recent answers on component mount using tRPC useQuery hook
+  const recentAnswersQuery = trpc.getRecentAnswers.useQuery({ limit: 10 })
+
+  // Update recentAnswers state when query data changes
+  useEffect(() => {
+    if (recentAnswersQuery.data && recentAnswersQuery.data.answers) {
+      console.log('Setting recent answers from query:', recentAnswersQuery.data.answers)
+      setRecentAnswers(recentAnswersQuery.data.answers)
+    }
+  }, [recentAnswersQuery.data])
+
+  const loadingAnswersQuery = recentAnswersQuery.isLoading
 
   const handleAutoPlay = (e) => {
     e.preventDefault()
@@ -147,6 +161,37 @@ export default function AutoPlayPage() {
                   <Form.Text className="text-muted">
                     The word you want to solve
                   </Form.Text>
+                </Form.Group>
+
+                <Form.Group className="mb-3">
+                  <Form.Label>Or Select Recent Answer</Form.Label>
+                  {loadingAnswersQuery ? (
+                    <div className="d-flex align-items-center gap-2">
+                      <Spinner animation="border" size="sm" />
+                      <span className="text-muted">Loading recent answers...</span>
+                    </div>
+                  ) : recentAnswers.length > 0 ? (
+                    <Form.Select
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setAnswer(e.target.value)
+                        }
+                      }}
+                      disabled={autoPlayMutation.isPending}
+                      defaultValue=""
+                    >
+                      <option value="">-- Select an answer from recent history --</option>
+                      {recentAnswers.map((item) => (
+                        <option key={item.date} value={item.word}>
+                          {item.word} ({item.date})
+                        </option>
+                      ))}
+                    </Form.Select>
+                  ) : (
+                    <Form.Text className="text-muted">
+                      No recent answers available
+                    </Form.Text>
+                  )}
                 </Form.Group>
 
                 <Form.Group className="mb-3">

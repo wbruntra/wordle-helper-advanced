@@ -2,6 +2,7 @@ import { initTRPC } from '@trpc/server'
 import { z } from 'zod'
 import likelyWords from '@/likely-word-list.json'
 import { chooseBestGuessFromRemaining, autoPlayWordle } from '@/auto-play-wordle'
+import db from '@/db_connect'
 
 // Utility functions for word evaluation
 const evaluateGuess = (guess: string, answer: string): string => {
@@ -72,6 +73,35 @@ export const appRouter = t.router({
         message: 'Wordle helper is ready to use!',
         features: ['auto-play', 'solver', 'image-analysis'],
         version: '1.0.0',
+      }
+    }),
+
+  // Fetch recent Wordle answers from history
+  getRecentAnswers: t.procedure
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(100).default(10),
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        const answers = await db('answer_history')
+          .select('date', 'word')
+          .orderBy('date', 'desc')
+          .limit(input.limit)
+
+        return {
+          answers: answers.map((row) => ({
+            date: row.date,
+            word: row.word.toUpperCase(),
+          })),
+          error: null,
+        }
+      } catch (error: any) {
+        return {
+          answers: [],
+          error: error.message || 'Failed to fetch recent answers',
+        }
       }
     }),
 

@@ -1,12 +1,6 @@
 import express, { Express, Request, Response, NextFunction } from 'express'
 import cors from 'cors'
 import logger from 'morgan'
-import randomstring from 'randomstring'
-import _ from 'lodash'
-import path from 'path'
-import s3 from './bunS3'
-import config from './config'
-import { getGuesses } from './getGuesses'
 import { createExpressMiddleware } from '@trpc/server/adapters/express'
 import { appRouter, createTRPCContext } from './src/server/trpc'
 
