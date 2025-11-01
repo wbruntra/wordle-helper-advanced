@@ -65,17 +65,19 @@ crontab -e
 
 **Run at 5:00 AM daily** (recommended - after midnight, before most activity):
 ```cron
-0 5 * * * cd /home/william/wordle-helper-advanced && ./update-wordle-answers.sh
+0 5 * * * cd /home/william/wordle-helper-advanced && ./update-wordle-answers.ts
 ```
 
 **Run at 12:05 AM daily** (just after midnight):
 ```cron
-5 0 * * * cd /home/william/wordle-helper-advanced && ./update-wordle-answers.sh
+5 0 * * * cd /home/william/wordle-helper-advanced && ./update-wordle-answers.ts
 ```cron
 5 0 * * * cd /home/william/wordle-helper-advanced && ./update-wordle-answers.sh
 ```
 
 **Run every 6 hours** (backup approach):
+```cron
+0 */6 * * * cd /home/william/wordle-helper-advanced && ./update-wordle-answers.ts
 ```cron
 0 */6 * * * cd /home/william/wordle-helper-advanced && ./update-wordle-answers.sh
 
