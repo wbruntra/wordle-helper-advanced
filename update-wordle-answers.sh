@@ -9,7 +9,7 @@ set -e  # Exit on any error
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORDLE_URL="https://wordfinder.yourdictionary.com/wordle/answers/"
-TEMP_HTML="${SCRIPT_DIR}/temp_answers.html"
+TEMP_HTML="${SCRIPT_DIR}/debug/temp_answers.html"
 LOG_FILE="${SCRIPT_DIR}/update-wordle-answers.log"
 
 # Colors for output
@@ -35,7 +35,8 @@ log_success() {
 # Cleanup function
 cleanup() {
     if [ -f "$TEMP_HTML" ]; then
-        rm -f "$TEMP_HTML"
+        echo "$TEMP_HTML"
+        # rm -f "$TEMP_HTML"
     fi
 }
 
