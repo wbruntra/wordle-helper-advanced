@@ -1,11 +1,18 @@
 import * as fs from "fs";
 import * as path from "path";
 import { load } from "cheerio";
+import type { Cheerio } from "cheerio";
+import type { Element as DomElement } from "domhandler";
 import db from "./db_connect.js";
 
 interface WordleAnswer {
   wordleNumber: number;
   date: string; // ISO 8601 format: YYYY-MM-DD
+  word: string;
+}
+
+interface TodayData {
+  wordleNumber: number;
   word: string;
 }
 
@@ -33,8 +40,7 @@ function calculateDateFromWordleNumber(wordleNumber: number): string {
 }
 
 // Strategy 1: Extract from hidden span in the cell
-function extractFromHiddenSpan(cellElement: any): string | null {
-  const $ = require("cheerio").load;
+function extractFromHiddenSpan(cellElement: Cheerio<DomElement>): string | null {
   let hiddenSpan = cellElement.find("span[style*='display:none']");
   if (hiddenSpan.length === 0) {
     hiddenSpan = cellElement.find("span[style*='display: none']");
@@ -53,11 +59,14 @@ function extractAllCapWord(cellText: string): string | null {
     .trim();
   
   // Find all 5-letter words in all caps
-  const words = cleanText.split(/\s+/);
-  for (const word of words) {
-    if (word.length === 5 && /^[A-Z]+$/.test(word)) {
-      return word;
-    }
+  const words = cleanText.match(/[A-Z]{5}/g);
+  if (words && words.length === 1) {
+    return words[0];
+  }
+
+  if (words && words.length > 1) {
+    // Prefer the last occurrence to skip terms like TODAY in the date column
+    return words[words.length - 1];
   }
   return null;
 }
@@ -75,11 +84,72 @@ function isTodaysAnswer(wordleNumber: number): boolean {
   return todayDate === calculatedDate;
 }
 
-function parseAnswersHtml(htmlPath: string): WordleAnswer[] {
+function extractDataAnswerAttr(cellElement: Cheerio<DomElement>): string | null {
+  const attrValue = cellElement.find("[data-answer]").attr("data-answer");
+  if (typeof attrValue === "string") {
+    return attrValue.trim();
+  }
+  return null;
+}
+
+function normalizeWord(word: string | null | undefined): string | null {
+  if (!word) {
+    return null;
+  }
+
+  const normalized = word.trim().toUpperCase();
+  if (normalized.length === 5 && /^[A-Z]+$/.test(normalized)) {
+    return normalized;
+  }
+
+  return null;
+}
+
+function extractTodayData(htmlContent: string): TodayData | null {
+  const match = htmlContent.match(
+    /todayData:\s*\{\s*date:\s*'\d{6}',\s*index:\s*(\d+),\s*answer:\s*'([A-Z]+)'\s*\}/i,
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const [, indexString, answer] = match;
+  const wordleNumber = parseInt(indexString, 10);
+  const word = normalizeWord(answer);
+
+  if (!wordleNumber || !word) {
+    return null;
+  }
+
+  return {
+    wordleNumber,
+    word,
+  };
+}
+
+export function parseAnswersHtml(htmlPath: string): WordleAnswer[] {
   const htmlContent = fs.readFileSync(htmlPath, "utf-8");
   const $ = load(htmlContent);
 
-  const answers: WordleAnswer[] = [];
+  const todayData = extractTodayData(htmlContent);
+
+  const answersByNumber = new Map<number, WordleAnswer>();
+
+  const recordAnswer = (wordleNumber: number, candidate: string | null) => {
+    const normalized = normalizeWord(candidate);
+    if (!normalized || !Number.isInteger(wordleNumber) || wordleNumber <= 0) {
+      return;
+    }
+
+    if (!answersByNumber.has(wordleNumber)) {
+      answersByNumber.set(wordleNumber, {
+        wordleNumber,
+        date: calculateDateFromWordleNumber(wordleNumber),
+        word: normalized,
+      });
+    }
+  };
 
   // Find all table rows in the tables
   $("table tbody tr").each((_, row) => {
@@ -95,8 +165,9 @@ function parseAnswersHtml(htmlPath: string): WordleAnswer[] {
         .filter((s) => s.length > 0)
         .join(" ");
 
-      const wordleNumberText = $(cells[1]).text().trim();
-      const wordleNumber = parseInt(wordleNumberText);
+    const wordleNumberText = $(cells[1]).text().trim();
+    const wordleNumber = parseInt(wordleNumberText, 10);
+    const isTodayRow = /today/i.test(dateText);
       
       // Extract word from the answer cell using multiple strategies
       let word: string | null = null;
@@ -117,6 +188,11 @@ function parseAnswersHtml(htmlPath: string): WordleAnswer[] {
         word = extractAllCapWord(cellText);
       }
       
+      // Strategy 2b: Look for data-answer attributes on the cell or descendants
+      if (!word) {
+        word = extractDataAnswerAttr($(cells[2]));
+      }
+
       // Strategy 3: If still not found but this is today's puzzle, log a warning
       if (!word && isTodaysAnswer(wordleNumber)) {
         console.warn(
@@ -125,25 +201,20 @@ function parseAnswersHtml(htmlPath: string): WordleAnswer[] {
         );
       }
 
-      // Only add if we found a valid word
-      if (
-        !isNaN(wordleNumber) &&
-        wordleNumber > 0 &&
-        word &&
-        word.length === 5 &&
-        /^[A-Z]+$/.test(word)
-      ) {
-        const date = calculateDateFromWordleNumber(wordleNumber);
-        answers.push({
-          wordleNumber,
-          date,
-          word,
-        });
+      // Strategy 4: Leverage todayData for the "Today" row fallback
+      if (!word && isTodayRow && todayData && todayData.wordleNumber === wordleNumber) {
+        word = todayData.word;
       }
+
+      recordAnswer(wordleNumber, word);
     }
   });
 
-  return answers;
+  if (todayData && !answersByNumber.has(todayData.wordleNumber)) {
+    recordAnswer(todayData.wordleNumber, todayData.word);
+  }
+
+  return Array.from(answersByNumber.values());
 }
 
 async function main() {
@@ -213,4 +284,6 @@ async function main() {
   }
 }
 
-main();
+if (import.meta.main) {
+  main();
+}

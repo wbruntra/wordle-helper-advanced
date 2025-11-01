@@ -9,8 +9,8 @@
     "build:watch": "tsc --watch",
     "start": "node ./dist/bin/www",
     "dev": "bun --watch app.ts",
-    "test": "bun test utils.test.js auto-play-wordle.test.js",
-    "test:watch": "bun test --watch utils.test.js auto-play-wordle.test.js",
+    "test": "bun test utils.test.js auto-play-wordle.test.js parseAnswers.test.ts",
+    "test:watch": "bun test --watch utils.test.js auto-play-wordle.test.js parseAnswers.test.ts",
     "populate:first-guesses": "bun run ./populate-first-guesses.js",
     "type-check": "tsc --noEmit"
   },
