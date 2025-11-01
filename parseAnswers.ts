@@ -32,6 +32,49 @@ function calculateDateFromWordleNumber(wordleNumber: number): string {
   return `${year}-${month}-${day}`;
 }
 
+// Strategy 1: Extract from hidden span in the cell
+function extractFromHiddenSpan(cellElement: any): string | null {
+  const $ = require("cheerio").load;
+  let hiddenSpan = cellElement.find("span[style*='display:none']");
+  if (hiddenSpan.length === 0) {
+    hiddenSpan = cellElement.find("span[style*='display: none']");
+  }
+  if (hiddenSpan.length > 0) {
+    return hiddenSpan.text().trim();
+  }
+  return null;
+}
+
+// Strategy 2: Extract 5-letter all-caps word from cell text
+function extractAllCapWord(cellText: string): string | null {
+  // Remove "Reveal" button text and other UI elements
+  const cleanText = cellText
+    .replace(/Reveal/gi, "")
+    .trim();
+  
+  // Find all 5-letter words in all caps
+  const words = cleanText.split(/\s+/);
+  for (const word of words) {
+    if (word.length === 5 && /^[A-Z]+$/.test(word)) {
+      return word;
+    }
+  }
+  return null;
+}
+
+// Strategy 3: Check if this is today's puzzle based on Wordle number
+function isTodaysAnswer(wordleNumber: number): boolean {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = (today.getMonth() + 1).toString().padStart(2, "0");
+  const day = today.getDate().toString().padStart(2, "0");
+  
+  const todayDate = `${year}-${month}-${day}`;
+  const calculatedDate = calculateDateFromWordleNumber(wordleNumber);
+  
+  return todayDate === calculatedDate;
+}
+
 function parseAnswersHtml(htmlPath: string): WordleAnswer[] {
   const htmlContent = fs.readFileSync(htmlPath, "utf-8");
   const $ = load(htmlContent);
@@ -53,32 +96,36 @@ function parseAnswersHtml(htmlPath: string): WordleAnswer[] {
         .join(" ");
 
       const wordleNumberText = $(cells[1]).text().trim();
+      const wordleNumber = parseInt(wordleNumberText);
       
-      // Extract word from the answer cell - handle both regular text and hidden span (for "Reveal" buttons)
-      let word = $(cells[2])
-        .text()
-        .trim()
-        .split("\n")
-        .map((s) => s.trim())
-        .filter((s) => s.length > 0)
-        .join(" ");
-
-      // If we got "Reveal" (which means the answer is hidden), try to get it from a hidden span
-      if (word === "Reveal" || word.includes("Reveal")) {
-        // Look for spans with display:none or display: none
-        let hiddenSpan = $(cells[2]).find("span[style*='display:none']");
-        if (hiddenSpan.length === 0) {
-          hiddenSpan = $(cells[2]).find("span[style*='display: none']");
-        }
-        if (hiddenSpan.length > 0) {
-          word = hiddenSpan.text().trim();
-        }
+      // Extract word from the answer cell using multiple strategies
+      let word: string | null = null;
+      
+      // Strategy 1: Try to get from hidden span first (for "Reveal" buttons)
+      word = extractFromHiddenSpan($(cells[2]));
+      
+      // Strategy 2: If not found, look for 5-letter all-caps word in visible text
+      if (!word) {
+        const cellText = $(cells[2])
+          .text()
+          .trim()
+          .split("\n")
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0)
+          .join(" ");
+        
+        word = extractAllCapWord(cellText);
+      }
+      
+      // Strategy 3: If still not found but this is today's puzzle, log a warning
+      if (!word && isTodaysAnswer(wordleNumber)) {
+        console.warn(
+          `Warning: Could not extract answer for today's puzzle (#${wordleNumber}). ` +
+          `Cell HTML: ${$(cells[2]).html()?.substring(0, 200)}`
+        );
       }
 
-      // Parse the wordle number
-      const wordleNumber = parseInt(wordleNumberText);
-
-      // Skip entries with invalid wordle numbers or words
+      // Only add if we found a valid word
       if (
         !isNaN(wordleNumber) &&
         wordleNumber > 0 &&

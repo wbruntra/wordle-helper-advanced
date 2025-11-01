@@ -65,19 +65,30 @@ if ! cd "$SCRIPT_DIR" && bun parseAnswers.ts "$TEMP_HTML"; then
     exit 1
 fi
 
-# Step 3: Verify the database was actually updated
+# Step 3: Verify the database was actually updated and get today's word
 log "Verifying database update..."
+
+# Get today's date in YYYY-MM-DD format
+TODAY_DATE=$(date '+%Y-%m-%d')
+
 VERIFY_RESULT=$(cd "$SCRIPT_DIR" && bun -e "
   const db = require('./db_connect.js');
   const count = await db('answer_history').count('* as total').first();
   const recent = await db('answer_history').select('date', 'word').orderBy('date', 'desc').first();
+  const today = await db('answer_history').select('date', 'word').where('date', '=', '$TODAY_DATE').first();
   console.log('ROWS:' + count.total);
   console.log('RECENT:' + recent.date + '=' + recent.word);
+  if (today) {
+    console.log('TODAY:' + today.date + '=' + today.word);
+  } else {
+    console.log('TODAY:NOT_FOUND');
+  }
   await db.destroy();
 " 2>/dev/null)
 
 ROW_COUNT=$(echo "$VERIFY_RESULT" | grep "ROWS:" | cut -d':' -f2)
 RECENT_ENTRY=$(echo "$VERIFY_RESULT" | grep "RECENT:" | cut -d':' -f2)
+TODAY_ENTRY=$(echo "$VERIFY_RESULT" | grep "TODAY:" | cut -d':' -f2)
 
 if [ -z "$ROW_COUNT" ] || [ "$ROW_COUNT" -eq 0 ]; then
     log_error "Database verification failed: No rows found in answer_history table"
@@ -85,4 +96,14 @@ if [ -z "$ROW_COUNT" ] || [ "$ROW_COUNT" -eq 0 ]; then
 fi
 
 log_success "Database verified: $ROW_COUNT rows, most recent: $RECENT_ENTRY"
+
+# Check if today's word was found
+if [ "$TODAY_ENTRY" = "NOT_FOUND" ]; then
+    log_error "WARNING: Today's word ($TODAY_DATE) was not found in the database!"
+    log_error "Most recent entry is: $RECENT_ENTRY"
+    exit 1
+else
+    log_success "✓ TODAY'S WORD ($TODAY_DATE): $TODAY_ENTRY"
+fi
+
 exit 0
