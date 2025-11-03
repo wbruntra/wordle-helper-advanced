@@ -145,8 +145,6 @@ export const appRouter = t.router({
           })
         ),
         guessNumber: z.number().int().min(1).max(6),
-        previousGuess: z.string().length(5).optional(),
-        previousEvaluation: z.string().length(5).optional(),
       })
     )
     .query(async ({ input }): Promise<{
@@ -156,7 +154,7 @@ export const appRouter = t.router({
       reason?: string
       error: string | null
     }> => {
-      const { history, guessNumber, previousGuess, previousEvaluation } = input
+      const { history, guessNumber } = input
 
       // Start with all likely words
       let remainingWords: string[] = [...likelyWords]
@@ -174,6 +172,10 @@ export const appRouter = t.router({
           error: 'No matching words for the given history',
         }
       }
+
+      // Derive previousGuess and previousEvaluation from the last entry in history
+      const previousGuess = history.length > 0 ? history[history.length - 1].guess : undefined
+      const previousEvaluation = history.length > 0 ? history[history.length - 1].evaluation : undefined
 
       // Use the solver function to get the best guess
       const bestChoice = await chooseBestGuessFromRemaining(

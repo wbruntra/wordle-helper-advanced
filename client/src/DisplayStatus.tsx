@@ -1,5 +1,5 @@
 import { orderEntireWordList } from './utils'
-import { applyGuesses, filterWordsUsingGuessResult, getBins, findOptimalGuesses, evaluateToString } from './advancedUtils'
+import { applyGuesses, filterWordsUsingGuessResult, getBins, evaluateToString } from './advancedUtils'
 import { useEffect, useState } from 'react'
 import _ from 'lodash'
 import { BsPencil } from 'react-icons/bs'
@@ -10,30 +10,72 @@ import { Badge, Button, Container, Spinner } from 'react-bootstrap'
 
 import BinsTable from './BinsTable'
 import BinDetailsModal from './BinDetailsModal'
+import { trpc } from './trpc'
+import type { RootState } from './redux/store'
+
+interface DisplayStatusProps {
+  guesses: any[]
+  startingList: string[]
+  onGuessClick: (index: number) => void
+  answer?: string
+}
+
+interface WordScore {
+  word: string
+  score?: number
+}
+
+interface BestGuessInfo {
+  reason: string
+  binsCount?: number
+  avgBinSize?: number | null
+  distributionScore?: number | null
+}
+
+interface BestGuessData {
+  word: string
+  evaluation: string | null
+  binsData: Record<string, string[] | number>
+  info: BestGuessInfo
+}
+
+interface ModalGuessData {
+  guess: string
+  evaluation: string
+  binsData: Record<string, string[] | number>
+  remainingWordsBefore: number
+  remainingWordsAfter: number
+  index: number
+  bestGuess?: BestGuessData | null
+}
+
+type BinObject = Record<string, { [key: string]: string[] | number }>
 
 function DisplayStatus({
   guesses,
   startingList,
   onGuessClick,
   answer,
-}) {
+}: DisplayStatusProps) {
   const dispatch = useDispatch()
-  const currentGuesses = useSelector(state => state.game.guesses)
+  const currentGuesses = useSelector((state: RootState) => state.game.guesses)
   const [showDepth, setShowDepth] = useState(false)
   const [usingOnlyFiltered, setUsingOnlyFiltered] = useState(true)
   const [countOnly, setCountOnly] = useState(true)
-  const [currentFilteredList, setFiltered] = useState(startingList.slice())
+  const [currentFilteredList, setFiltered] = useState<string[]>(startingList.slice())
   const [error, setError] = useState('')
-  const [bins, setBins] = useState([])
+  const [bins, setBins] = useState<BinObject[]>([])
   const [binsWord, setBinsWord] = useState('')
-  const [orderedWords, setOrderedWords] = useState([])
-  const [clickedGuess, setClickedGuess] = useState(null)
+  const [orderedWords, setOrderedWords] = useState<WordScore[]>([])
+  const [clickedGuess, setClickedGuess] = useState<string | null>(null)
   const [showBinModal, setShowBinModal] = useState(false)
-  const [modalGuessData, setModalGuessData] = useState(null)
+  const [modalGuessData, setModalGuessData] = useState<ModalGuessData | null>(null)
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
+  
+  const trpcUtils = trpc.useUtils()
 
   useEffect(() => {
-    let appliedGuesses = []
+    let appliedGuesses: any[] = []
     if (clickedGuess) {
       for (let i = 0; i < currentGuesses.length; i++) {
         appliedGuesses.push(currentGuesses[i])
@@ -83,16 +125,16 @@ function DisplayStatus({
         localFiltered = filterWordsUsingGuessResult(guess, localFiltered)
       }
 
-      let newBins = getBins(wordToAnalyze, localFiltered, { returnObject: true, showMatches: true })
+      let newBins: any = getBins(wordToAnalyze, localFiltered, { returnObject: true, showMatches: true })
       newBins = _.map(newBins, (value, key) => ({ [key]: value }))
-      newBins = _.sortBy(newBins, (value) => Object.values(value)[0].length)
+      newBins = _.sortBy(newBins, (value: any) => (Object.values(value)[0] as any).length)
       setBinsWord(`${wordToAnalyze} (sorting ${localFiltered.length} words)`)
       setBins(newBins)
     }
   }, [currentGuesses, showDepth, clickedGuess, startingList])
 
-  const getEvaluationColor = (evaluation) => {
-    const colors = []
+  const getEvaluationColor = (evaluation: string): string[] => {
+    const colors: string[] = []
     for (let i = 0; i < evaluation.length; i++) {
       const char = evaluation[i]
       if (char === 'G') colors.push('success')
@@ -102,14 +144,14 @@ function DisplayStatus({
     return colors
   }
 
-  const getColorForEvaluation = (colorBadge) => {
+  const getColorForEvaluation = (colorBadge: string): string => {
     if (colorBadge === 'success') return '#28a745'
     if (colorBadge === 'warning') return '#ffc107'
     if (colorBadge === 'secondary') return '#6c757d'
     return '#6c757d'
   }
 
-  const createBinsForGuess = (word) => {
+  const createBinsForGuess = (word: string) => {
     let localFiltered = startingList.slice()
     for (const guess of currentGuesses) {
       if (guess.word === word) {
@@ -118,17 +160,17 @@ function DisplayStatus({
       localFiltered = filterWordsUsingGuessResult(guess, localFiltered)
     }
 
-    let newBins = getBins(word, localFiltered, { returnObject: true, showMatches: true })
-    newBins = _.map(newBins, (value, key) => ({ [key]: value }))
-    newBins = _.sortBy(newBins, (value) => Object.values(value)[0].length)
+    let newBins: any = getBins(word, localFiltered, { returnObject: true, showMatches: true })
+    newBins = _.map(newBins, (value: any, key: any) => ({ [key]: value }))
+    newBins = _.sortBy(newBins, (value: any) => (Object.values(value)[0] as any).length)
     setBinsWord(`${word} (sorting ${localFiltered.length} words)`)
     setBins(newBins)
   }
 
-  const handleGuessCardClick = (guess, index) => {
+  const handleGuessCardClick = async (guess: any, index: number) => {
     // Get all previous guesses (excluding current one)
     const previousGuesses = currentGuesses
-      .filter((g, i) => i < index)
+      .filter((_g, i) => i < index)
       .map(g => ({
         word: g.word,
         key: g.key
@@ -151,7 +193,7 @@ function DisplayStatus({
     })
 
     // Determine the actual answer (from input or if list is down to 1)
-    let knownAnswer = null
+    let knownAnswer: string | null = null
     if (answer && answer.length === 5) {
       knownAnswer = answer.toUpperCase()
     } else if (remainingWordsAfter.length === 1) {
@@ -159,54 +201,56 @@ function DisplayStatus({
     }
 
     // Calculate the optimal guess for this state
-    let bestGuessData = null
+    let bestGuessData: BestGuessData | null = null
     const maxWordListForOptimal = 2000
     
     if (remainingWordsBefore.length <= maxWordListForOptimal) {
       try {
-        // Use the FULL starting list as candidates, evaluate against filtered words
-        const optimalGuesses = findOptimalGuesses(remainingWordsBefore, 1, {
-          maxCandidates: Math.min(2500, startingList.length),
-          candidateStrategy: 'sample',
-          candidatePool: startingList // Use full word list as candidate pool
+        // Use tRPC to get the best guess from the backend
+        const result = await trpcUtils.getBestGuess.fetch({
+          history: previousGuesses.map(g => ({
+            guess: g.word,
+            evaluation: g.key
+          })),
+          guessNumber: index + 1,
         })
-        
-        if (optimalGuesses && optimalGuesses.length > 0 && optimalGuesses[0].word) {
-          const bestGuess = optimalGuesses[0]
+
+        if (result && result.bestGuess && !result.error) {
+          const bestGuess = result.bestGuess
           
-          // Calculate bins for the best guess (still use remainingWordsBefore for the bins)
-          const bestBinsData = getBins(bestGuess.word, remainingWordsBefore, {
+          // Calculate bins for the best guess
+          const bestBinsData = getBins(bestGuess, remainingWordsBefore, {
             returnObject: true,
             showMatches: true
           })
           
           // Calculate evaluation if we know the answer
-          let bestEvaluation = null
+          let bestEvaluation: string | null = null
           if (knownAnswer) {
-            bestEvaluation = evaluateToString(bestGuess.word, knownAnswer)
+            bestEvaluation = evaluateToString(bestGuess, knownAnswer)
           }
           
           bestGuessData = {
-            word: bestGuess.word,
+            word: bestGuess,
             evaluation: bestEvaluation,
-            binsData: bestBinsData,
-            info: bestGuess.analysis ? {
-              reason: bestGuess.reason,
-              binsCount: bestGuess.analysis.binsCount,
-              avgBinSize: bestGuess.analysis.avgBinSize,
-              distributionScore: bestGuess.analysis.distributionScore
-            } : null
+            binsData: bestBinsData as Record<string, string[] | number>,
+            info: {
+              reason: result.reason || 'Optimal guess from backend',
+              binsCount: result.bins,
+              avgBinSize: result.bins ? parseFloat((result.remainingCount / result.bins).toFixed(2)) : null,
+              distributionScore: null
+            }
           }
         }
       } catch (error) {
-        console.error('Error calculating optimal guess:', error)
+        console.error('Error fetching optimal guess from backend:', error)
       }
     }
 
     setModalGuessData({
       guess: guess.word,
       evaluation: guess.key,
-      binsData,
+      binsData: binsData as Record<string, string[] | number>,
       remainingWordsBefore: remainingWordsBefore.length,
       remainingWordsAfter: remainingWordsAfter.length,
       index,
@@ -402,7 +446,7 @@ function DisplayStatus({
                                   <tr key={`ordered-${i}`}>
                                     <td>{word.word}</td>
                                     <td>
-                                      {((100 * word.score) / currentFilteredList.length).toFixed(1)}%
+                                      {((100 * (word.score || 0)) / currentFilteredList.length).toFixed(1)}%
                                     </td>
                                   </tr>
                                 ))}
