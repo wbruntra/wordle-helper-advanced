@@ -1,4 +1,5 @@
-import { Modal, Badge } from 'react-bootstrap'
+import { Modal, Badge, Button, ButtonGroup } from 'react-bootstrap'
+import { useState } from 'react'
 
 export default function BinDetailsModal({
   show,
@@ -8,10 +9,25 @@ export default function BinDetailsModal({
   binsData,
   remainingWordsBefore,
   strategy,
+  // Optional: Best/alternative guess data
+  bestGuess,
+  bestEvaluation,
+  bestBinsData,
+  bestGuessInfo, // Can include score, reason, etc.
 }) {
+  const [viewMode, setViewMode] = useState('actual') // 'actual' or 'best'
+  
   if (!guess || !binsData) {
     return null
   }
+  
+  // Determine which data to display based on viewMode
+  const displayGuess = viewMode === 'best' && bestGuess ? bestGuess : guess
+  const displayEvaluation = viewMode === 'best' && bestEvaluation ? bestEvaluation : evaluation
+  const displayBinsData = viewMode === 'best' && bestBinsData ? bestBinsData : binsData
+  
+  const hasBestGuess = bestGuess && bestBinsData
+  const showEvaluationColors = viewMode === 'actual' || (viewMode === 'best' && bestEvaluation)
 
   const getEvaluationColor = (evaluation) => {
     const colors = []
@@ -31,22 +47,46 @@ export default function BinDetailsModal({
     return '#6c757d'
   }
 
-  const colors = getEvaluationColor(evaluation)
+  const colors = displayEvaluation ? getEvaluationColor(displayEvaluation) : []
 
   return (
     <Modal show={show} onHide={onHide} size="lg" scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
-          Bin Details for Guess: {guess}
+          Bin Details for Guess: {displayGuess}
         </Modal.Title>
       </Modal.Header>
       <Modal.Body>
         <>
+          {hasBestGuess && (
+            <div className="mb-3">
+              <ButtonGroup className="w-100">
+                <Button
+                  variant={viewMode === 'actual' ? 'primary' : 'outline-primary'}
+                  onClick={() => setViewMode('actual')}
+                >
+                  Your Guess: {guess}
+                </Button>
+                <Button
+                  variant={viewMode === 'best' ? 'success' : 'outline-success'}
+                  onClick={() => setViewMode('best')}
+                >
+                  Best Guess: {bestGuess}
+                </Button>
+              </ButtonGroup>
+              {viewMode === 'best' && bestGuessInfo?.reason && (
+                <div className="mt-2 text-muted small">
+                  <strong>Why this is optimal:</strong> {bestGuessInfo.reason}
+                </div>
+              )}
+            </div>
+          )}
+          
           <div className="mb-4">
             <h6>Guess Information</h6>
             <div className="d-flex align-items-center gap-2 mb-3">
               <div className="d-flex gap-1">
-                {guess.split('').map((letter, letterIndex) => (
+                {displayGuess.split('').map((letter, letterIndex) => (
                   <div
                     key={letterIndex}
                     style={{
@@ -57,8 +97,9 @@ export default function BinDetailsModal({
                       height: '35px',
                       fontSize: '1rem',
                       fontWeight: 'bold',
-                      color: 'white',
-                      backgroundColor: getColorForEvaluation(colors[letterIndex]),
+                      color: showEvaluationColors ? 'white' : '#6c757d',
+                      backgroundColor: showEvaluationColors ? getColorForEvaluation(colors[letterIndex]) : 'transparent',
+                      border: showEvaluationColors ? 'none' : '2px solid #6c757d',
                       borderRadius: '4px',
                     }}
                   >
@@ -66,7 +107,10 @@ export default function BinDetailsModal({
                   </div>
                 ))}
               </div>
-              <code className="ms-auto">{evaluation}</code>
+              {showEvaluationColors && <code className="ms-auto">{displayEvaluation}</code>}
+              {!showEvaluationColors && (
+                <small className="ms-auto text-muted">(Evaluation unknown)</small>
+              )}
             </div>
             {strategy && (
               <div className="text-muted small">
@@ -78,6 +122,19 @@ export default function BinDetailsModal({
                 <strong>Words before this guess:</strong> {remainingWordsBefore}
               </div>
             )}
+            {viewMode === 'best' && bestGuessInfo && (
+              <div className="text-muted small mt-2">
+                {bestGuessInfo.binsCount && (
+                  <div><strong>Bins created:</strong> {bestGuessInfo.binsCount}</div>
+                )}
+                {bestGuessInfo.avgBinSize && (
+                  <div><strong>Average bin size:</strong> {bestGuessInfo.avgBinSize.toFixed(2)}</div>
+                )}
+                {bestGuessInfo.distributionScore && (
+                  <div><strong>Distribution score:</strong> {bestGuessInfo.distributionScore.toFixed(2)}</div>
+                )}
+              </div>
+            )}
           </div>
 
           <div>
@@ -86,7 +143,7 @@ export default function BinDetailsModal({
               Each row shows how many remaining words would produce that color pattern.
             </p>
             <div className="d-flex flex-column gap-2">
-              {Object.entries(binsData)
+              {Object.entries(displayBinsData)
                 .sort(([, valA], [, valB]) => {
                   const countA = Array.isArray(valA) ? valA.length : valA
                   const countB = Array.isArray(valB) ? valB.length : valB
@@ -94,12 +151,14 @@ export default function BinDetailsModal({
                 })
                 .map(([evaluationPattern, words]) => {
                   const count = Array.isArray(words) ? words.length : words
-                  const isActualResult = evaluationPattern === evaluation.replace(/[^GY]/g, '-')
+                  const isActualResult = viewMode === 'actual' && evaluationPattern === evaluation.replace(/[^GY]/g, '-')
+                  const isBestResult = viewMode === 'best' && bestEvaluation && evaluationPattern === bestEvaluation.replace(/[^GY]/g, '-')
+                  const isHighlighted = isActualResult || isBestResult
 
                   return (
                     <div
                       key={evaluationPattern}
-                      className={`border rounded p-2 ${isActualResult ? 'border-primary bg-secondary' : ''}`}
+                      className={`border rounded p-2 ${isHighlighted ? 'border-primary bg-secondary' : ''}`}
                     >
                       <div className="d-flex align-items-center justify-content-between">
                         <div className="d-flex align-items-center gap-2">
@@ -127,13 +186,16 @@ export default function BinDetailsModal({
                             ))}
                           </div>
                           <Badge
-                            bg={isActualResult ? 'primary' : 'secondary'}
+                            bg={isHighlighted ? 'primary' : 'secondary'}
                             className="ms-2"
                           >
                             {count} words
                           </Badge>
                           {isActualResult && (
                             <Badge bg="success" className="ms-1">Your Result</Badge>
+                          )}
+                          {isBestResult && (
+                            <Badge bg="success" className="ms-1">Expected Result</Badge>
                           )}
                         </div>
                         <small className="text-muted">

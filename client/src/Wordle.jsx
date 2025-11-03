@@ -244,6 +244,7 @@ function Wordle() {
         guesses={guesses}
         startingList={currentFilteredList}
         onGuessClick={startEditingGuess}
+        answer={answerInput}
       />
 
       <WordListModal

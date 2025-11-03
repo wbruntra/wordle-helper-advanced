@@ -68,6 +68,7 @@ interface GuessComparisonResult {
 interface FindOptimalOptions {
   maxCandidates?: number
   candidateStrategy?: 'first' | 'sample' | 'all'
+  candidatePool?: string[] // Optional separate pool to choose candidates from
 }
 
 interface CompareGuessOptions {
@@ -708,12 +709,13 @@ export const analyzeGuess = (guess: string, key: string | null, remainingWords: 
 /**
  * Finds the optimal guess(es) for a given word list
  * Returns top candidates based on bin distribution
- * @param {string[]} wordList - Remaining possible words
+ * @param {string[]} wordList - Remaining possible words (used for scoring/analysis)
  * @param {number} topN - Number of top candidates to return
+ * @param {FindOptimalOptions} options - Configuration options
  * @returns {Array} Array of optimal guesses with their analysis
  */
 export const findOptimalGuesses = (wordList: string[], topN: number = 1, options: FindOptimalOptions = {}): OptimalGuess[] => {
-  const { maxCandidates = Infinity, candidateStrategy = 'sample' } = options
+  const { maxCandidates = Infinity, candidateStrategy = 'sample', candidatePool = null } = options
 
   if (wordList.length === 1) {
     return [
@@ -732,23 +734,26 @@ export const findOptimalGuesses = (wordList: string[], topN: number = 1, options
     ]
   }
 
-  let candidatePool = wordList
+  // Use provided candidate pool or default to wordList
+  let initialPool = candidatePool || wordList
   let candidatePoolNote: string | null = null
 
-  const shouldLimitCandidates = Number.isFinite(maxCandidates) && wordList.length > maxCandidates
+  const shouldLimitCandidates = Number.isFinite(maxCandidates) && initialPool.length > maxCandidates
+  let finalCandidatePool = initialPool
+  
   if (shouldLimitCandidates) {
     if (candidateStrategy === 'first') {
-      candidatePool = wordList.slice(0, maxCandidates)
+      finalCandidatePool = initialPool.slice(0, maxCandidates)
     } else if (candidateStrategy === 'sample') {
-      candidatePool = _.sampleSize(wordList, maxCandidates)
+      finalCandidatePool = _.sampleSize(initialPool, maxCandidates)
     } else {
-      candidatePool = wordList.slice(0, maxCandidates)
+      finalCandidatePool = initialPool.slice(0, maxCandidates)
     }
-    candidatePoolNote = `Analyzed ${candidatePool.length} of ${wordList.length} candidates`
+    candidatePoolNote = `Analyzed ${finalCandidatePool.length} of ${initialPool.length} candidates`
   }
 
-  // Score all remaining words
-  const candidates = candidatePool.map((word) => {
+  // Score all candidates against the wordList (remaining possible answers)
+  const candidates = finalCandidatePool.map((word) => {
     const analysis = analyzeGuess(word, null, wordList)
     return {
       word,

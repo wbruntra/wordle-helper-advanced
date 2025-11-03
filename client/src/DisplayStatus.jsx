@@ -1,5 +1,5 @@
 import { orderEntireWordList } from './utils'
-import { applyGuesses, filterWordsUsingGuessResult, getBins } from './advancedUtils'
+import { applyGuesses, filterWordsUsingGuessResult, getBins, findOptimalGuesses, evaluateToString } from './advancedUtils'
 import { useEffect, useState } from 'react'
 import _ from 'lodash'
 import { BsPencil } from 'react-icons/bs'
@@ -15,6 +15,7 @@ function DisplayStatus({
   guesses,
   startingList,
   onGuessClick,
+  answer,
 }) {
   const dispatch = useDispatch()
   const currentGuesses = useSelector(state => state.game.guesses)
@@ -149,13 +150,67 @@ function DisplayStatus({
       showMatches: true
     })
 
+    // Determine the actual answer (from input or if list is down to 1)
+    let knownAnswer = null
+    if (answer && answer.length === 5) {
+      knownAnswer = answer.toUpperCase()
+    } else if (remainingWordsAfter.length === 1) {
+      knownAnswer = remainingWordsAfter[0]
+    }
+
+    // Calculate the optimal guess for this state
+    let bestGuessData = null
+    const maxWordListForOptimal = 2000
+    
+    if (remainingWordsBefore.length <= maxWordListForOptimal) {
+      try {
+        // Use the FULL starting list as candidates, evaluate against filtered words
+        const optimalGuesses = findOptimalGuesses(remainingWordsBefore, 1, {
+          maxCandidates: Math.min(2500, startingList.length),
+          candidateStrategy: 'sample',
+          candidatePool: startingList // Use full word list as candidate pool
+        })
+        
+        if (optimalGuesses && optimalGuesses.length > 0 && optimalGuesses[0].word) {
+          const bestGuess = optimalGuesses[0]
+          
+          // Calculate bins for the best guess (still use remainingWordsBefore for the bins)
+          const bestBinsData = getBins(bestGuess.word, remainingWordsBefore, {
+            returnObject: true,
+            showMatches: true
+          })
+          
+          // Calculate evaluation if we know the answer
+          let bestEvaluation = null
+          if (knownAnswer) {
+            bestEvaluation = evaluateToString(bestGuess.word, knownAnswer)
+          }
+          
+          bestGuessData = {
+            word: bestGuess.word,
+            evaluation: bestEvaluation,
+            binsData: bestBinsData,
+            info: bestGuess.analysis ? {
+              reason: bestGuess.reason,
+              binsCount: bestGuess.analysis.binsCount,
+              avgBinSize: bestGuess.analysis.avgBinSize,
+              distributionScore: bestGuess.analysis.distributionScore
+            } : null
+          }
+        }
+      } catch (error) {
+        console.error('Error calculating optimal guess:', error)
+      }
+    }
+
     setModalGuessData({
       guess: guess.word,
       evaluation: guess.key,
       binsData,
       remainingWordsBefore: remainingWordsBefore.length,
       remainingWordsAfter: remainingWordsAfter.length,
-      index
+      index,
+      bestGuess: bestGuessData
     })
     setShowBinModal(true)
   }
@@ -409,6 +464,10 @@ function DisplayStatus({
         evaluation={modalGuessData?.evaluation}
         binsData={modalGuessData?.binsData}
         remainingWordsBefore={modalGuessData?.remainingWordsBefore}
+        bestGuess={modalGuessData?.bestGuess?.word}
+        bestEvaluation={modalGuessData?.bestGuess?.evaluation}
+        bestBinsData={modalGuessData?.bestGuess?.binsData}
+        bestGuessInfo={modalGuessData?.bestGuess?.info}
       />
     </div>
   )
