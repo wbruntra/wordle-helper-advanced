@@ -23,7 +23,7 @@ function UploadScreenShotModal({ show, handleClose, setGuesses }) {
       })
 
       console.log(response.data)
-      setGuesses(response.data.guesses)
+      setGuesses(response.data)
       setSuccessMessage('Screenshot successfully processed!') // Show success message
       // Optionally close the modal after successful interpretation
       handleClose()

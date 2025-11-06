@@ -29,6 +29,20 @@ const getGuessesFromBuffer = async (buffer) => {
 }
 
 const getGuesses = async (image_url) => {
+  // Validate the image_url parameter
+  if (!image_url || typeof image_url !== 'string') {
+    throw new Error('image_url is required and must be a valid URL string')
+  }
+
+  // Basic URL validation
+  try {
+    new URL(image_url)
+  } catch (error) {
+    throw new Error(`Invalid URL provided: ${image_url}`)
+  }
+
+  console.log('Fetching image from URL:', image_url)
+
   const response = await axios.get(image_url, {
     responseType: 'arraybuffer',
   })

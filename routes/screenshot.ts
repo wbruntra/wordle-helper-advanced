@@ -19,7 +19,7 @@ interface PresignedUrlResponse {
 }
 
 interface InterpretGuessesRequest {
-  imageUrl: string
+  fileUrl: string
   board: string[][]
   gameType?: string
 }
@@ -69,10 +69,16 @@ router.post(
   '/api/interpret-guesses',
   async (req: Request<{}, any, InterpretGuessesRequest>, res: Response) => {
     try {
-      const { imageUrl, board, gameType = 'wordle' } = req.body
+      const { fileUrl, board, gameType = 'wordle' } = req.body
+
+      // Validate fileUrl parameter
+      if (!fileUrl || typeof fileUrl !== 'string') {
+        console.error('Invalid or missing fileUrl:', fileUrl)
+        return res.status(400).json({ error: 'fileUrl is required and must be a valid URL string' })
+      }
 
       // Call the getGuesses function with proper typing
-      const result = await getGuesses(imageUrl)
+      const result = await getGuesses(fileUrl)
 
       res.json(result)
     } catch (error) {
