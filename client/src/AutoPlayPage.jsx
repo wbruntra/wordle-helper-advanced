@@ -281,7 +281,7 @@ export default function AutoPlayPage() {
                       onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#3a3f47')}
                       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '')}
                     >
-                      <div className="d-flex align-items-center gap-2 mb-2">
+                      <div className="d-flex align-items-center gap-2 mb-2 flex-wrap">
                         <Badge bg="secondary" className="me-2">
                           #{step.guessNumber}
                         </Badge>
@@ -289,13 +289,13 @@ export default function AutoPlayPage() {
                           {step.guess.split('').map((letter, letterIndex) => (
                             <div
                               key={letterIndex}
-                              style={{
+                                style={{
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                width: '40px',
-                                height: '40px',
-                                fontSize: '1.2rem',
+                                width: 'min(40px, 10vw)',
+                                height: 'min(40px, 10vw)',
+                                fontSize: 'calc(0.8rem + 1vw)',
                                 fontWeight: 'bold',
                                 color: 'white',
                                 backgroundColor: getColorForEvaluation(colors[letterIndex]),
@@ -306,7 +306,7 @@ export default function AutoPlayPage() {
                             </div>
                           ))}
                         </div>
-                        <code className="ms-auto text-muted">{step.evaluation}</code>
+                        <code className="ms-auto text-muted" style={{ whiteSpace: 'nowrap' }}>{step.evaluation}</code>
                       </div>
 
                       <div className="text-muted small">
@@ -374,7 +374,7 @@ export default function AutoPlayPage() {
             <>
               <div className="mb-4">
                 <h6>Guess Information</h6>
-                <div className="d-flex align-items-center gap-2 mb-3">
+                <div className="d-flex align-items-center gap-2 mb-3 flex-wrap">
                   <Badge bg="secondary">#{selectedGuess.guessNumber}</Badge>
                   <div className="d-flex gap-1">
                     {selectedGuess.guess.split('').map((letter, letterIndex) => {
@@ -386,9 +386,9 @@ export default function AutoPlayPage() {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            width: '35px',
-                            height: '35px',
-                            fontSize: '1rem',
+                            width: 'min(35px, 9vw)',
+                            height: 'min(35px, 9vw)',
+                            fontSize: 'calc(0.6rem + 1vw)',
                             fontWeight: 'bold',
                             color: 'white',
                             backgroundColor: getColorForEvaluation(colors[letterIndex]),
@@ -400,7 +400,7 @@ export default function AutoPlayPage() {
                       )
                     })}
                   </div>
-                  <code className="ms-auto">{selectedGuess.evaluation}</code>
+                  <code className="ms-auto" style={{ whiteSpace: 'nowrap' }}>{selectedGuess.evaluation}</code>
                 </div>
                 <div className="text-muted small">
                   <div><strong>Strategy:</strong> {selectedGuess.strategy}</div>
