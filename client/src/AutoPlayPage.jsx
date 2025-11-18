@@ -142,7 +142,7 @@ export default function AutoPlayPage() {
       </div>
 
       <Row className="mb-4">
-        <Col lg={6}>
+        <Col lg={6} className="order-1">
           <Card className="mb-4">
             <Card.Body>
               <Card.Title>Play Automatically</Card.Title>
@@ -206,7 +206,7 @@ export default function AutoPlayPage() {
                     disabled={autoPlayMutation.isPending}
                   />
                   <Form.Text className="text-muted">
-                    Leave blank to use the default (CRATE)
+                    Leave blank to use the default
                   </Form.Text>
                 </Form.Group>
 
@@ -232,8 +232,8 @@ export default function AutoPlayPage() {
           </Card>
         </Col>
 
-        <Col lg={6}>
-          <Card className="bg-secondary">
+        <Col lg={6} className="order-3 order-lg-2">
+          <Card className="bg-secondary mb-4">
             <Card.Body>
               <Card.Title>How it works</Card.Title>
               <ul className="mb-0">
@@ -244,114 +244,116 @@ export default function AutoPlayPage() {
             </Card.Body>
           </Card>
         </Col>
-      </Row>
 
-      {gameResult && (
-        <Card className={`${gameResult.solved ? 'border-success' : 'border-danger'} mb-4`}>
-          <Card.Body>
-            <div className="d-flex justify-content-between align-items-center mb-4">
-              <div>
-                <h3 className="mb-0">
-                  {gameResult.solved ? '✅ SOLVED' : '❌ FAILED'}
-                </h3>
-                <p className="text-muted mb-0">
-                  {gameResult.solved ? getPerformanceMessage(gameResult.totalGuesses) : 'Better luck next time!'}
-                </p>
-              </div>
-              <div className="text-center">
-                <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>
-                  {gameResult.totalGuesses}
-                </div>
-                <small className="text-muted">guesses</small>
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <h5>Guess History</h5>
-              <div className="d-flex flex-column gap-3">
-                {gameResult.steps.map((step, index) => {
-                  const colors = getEvaluationColor(step.evaluation)
-
-                  return (
-                    <div
-                      key={index}
-                      className="border rounded p-3 clickable-card"
-                      style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
-                      onClick={() => handleGuessClick(step, gameResult.steps)}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#3a3f47')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '')}
-                    >
-                      <div className="d-flex align-items-center gap-2 mb-2 flex-wrap">
-                        <Badge bg="secondary" className="me-2">
-                          #{step.guessNumber}
-                        </Badge>
-                        <div className="d-flex gap-1">
-                          {step.guess.split('').map((letter, letterIndex) => (
-                            <div
-                              key={letterIndex}
-                                style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                width: 'min(40px, 10vw)',
-                                height: 'min(40px, 10vw)',
-                                fontSize: 'calc(0.8rem + 1vw)',
-                                fontWeight: 'bold',
-                                color: 'white',
-                                backgroundColor: getColorForEvaluation(colors[letterIndex]),
-                                borderRadius: '4px',
-                              }}
-                            >
-                              {letter}
-                            </div>
-                          ))}
-                        </div>
-                        <code className="ms-auto text-muted" style={{ whiteSpace: 'nowrap' }}>{step.evaluation}</code>
-                      </div>
-
-                      <div className="text-muted small">
-                        <div className="mb-2">
-                          <strong>Strategy:</strong> {step.strategy}
-                        </div>
-                        <div className="d-flex gap-3 flex-wrap">
-                          <div>
-                            📊 <strong>Before:</strong> {step.remainingWordsPreGuess} words
-                          </div>
-                          <div>
-                            ✂️ <strong>After:</strong> {step.remainingWordsPostGuess} words
-                          </div>
-                          {step.bins !== undefined && (
-                            <div>
-                              📦 <strong>Bins:</strong> {step.bins}
-                            </div>
-                          )}
-                        </div>
-                        <div className="mt-2 text-primary">
-                          <small>🔍 Click to see bin details</small>
-                        </div>
-                      </div>
+        {gameResult && (
+          <Col xs={12} className="order-2 order-lg-3">
+            <Card className={`${gameResult.solved ? 'border-success' : 'border-danger'} mb-4`}>
+              <Card.Body>
+                <div className="d-flex justify-content-between align-items-center mb-4">
+                  <div>
+                    <h3 className="mb-0">
+                      {gameResult.solved ? '✅ SOLVED' : '❌ FAILED'}
+                    </h3>
+                    <p className="text-muted mb-0">
+                      {gameResult.solved ? getPerformanceMessage(gameResult.totalGuesses) : 'Better luck next time!'}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <div style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>
+                      {gameResult.totalGuesses}
                     </div>
-                  )
-                })}
-              </div>
-            </div>
+                    <small className="text-muted">guesses</small>
+                  </div>
+                </div>
 
-            <div className="text-center">
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setGameResult(null)
-                  setAnswer('')
-                  setStartingWord('')
-                }}
-              >
-                Try Another
-              </Button>
-            </div>
-          </Card.Body>
-        </Card>
-      )}
+                <div className="mb-4">
+                  <h5>Guess History</h5>
+                  <div className="d-flex flex-column gap-3">
+                    {gameResult.steps.map((step, index) => {
+                      const colors = getEvaluationColor(step.evaluation)
+
+                      return (
+                        <div
+                          key={index}
+                          className="border rounded p-3 clickable-card"
+                          style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
+                          onClick={() => handleGuessClick(step, gameResult.steps)}
+                          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#3a3f47')}
+                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '')}
+                        >
+                          <div className="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                            <Badge bg="secondary" className="me-2">
+                              #{step.guessNumber}
+                            </Badge>
+                            <div className="d-flex gap-1">
+                              {step.guess.split('').map((letter, letterIndex) => (
+                                <div
+                                  key={letterIndex}
+                                    style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: 'min(40px, 10vw)',
+                                    height: 'min(40px, 10vw)',
+                                    fontSize: 'calc(0.8rem + 1vw)',
+                                    fontWeight: 'bold',
+                                    color: 'white',
+                                    backgroundColor: getColorForEvaluation(colors[letterIndex]),
+                                    borderRadius: '4px',
+                                  }}
+                                >
+                                  {letter}
+                                </div>
+                              ))}
+                            </div>
+                            <code className="ms-auto text-muted" style={{ whiteSpace: 'nowrap' }}>{step.evaluation}</code>
+                          </div>
+
+                          <div className="text-muted small">
+                            <div className="mb-2">
+                              <strong>Strategy:</strong> {step.strategy}
+                            </div>
+                            <div className="d-flex gap-3 flex-wrap">
+                              <div>
+                                📊 <strong>Before:</strong> {step.remainingWordsPreGuess} words
+                              </div>
+                              <div>
+                                ✂️ <strong>After:</strong> {step.remainingWordsPostGuess} words
+                              </div>
+                              {step.bins !== undefined && (
+                                <div>
+                                  📦 <strong>Bins:</strong> {step.bins}
+                                </div>
+                              )}
+                            </div>
+                            <div className="mt-2 text-primary">
+                              <small>🔍 Click to see bin details</small>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div className="text-center">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      setGameResult(null)
+                      setAnswer('')
+                      setStartingWord('')
+                    }}
+                  >
+                    Try Another
+                  </Button>
+                </div>
+              </Card.Body>
+            </Card>
+          </Col>
+        )}
+      </Row>
 
       {/* Bin Details Modal */}
       <Modal
@@ -432,8 +434,8 @@ export default function AutoPlayPage() {
                           key={evaluation}
                           className={`border rounded p-2 ${isActualResult ? 'border-primary bg-secondary' : ''}`}
                         >
-                          <div className="d-flex align-items-center justify-content-between">
-                            <div className="d-flex align-items-center gap-2">
+                          <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div className="d-flex align-items-center gap-2 flex-wrap">
                               <div className="d-flex gap-1">
                                 {evaluation.split('').map((char, index) => (
                                   <div
