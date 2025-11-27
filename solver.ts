@@ -56,7 +56,7 @@ const preComputeSecondGuess = ({ initialGuess, likelyWords }: PreComputeOptions)
   // for each key, we want to know the word that *maximizes* the number of bins
   // tiebreaker will be how evenly distributed the bins are
 
-  const allKeys = getAllKeys()
+  const allKeys = getPossibleKeys(initialGuess, likelyWords)
   const cache: Cache = {}
 
   console.log(`Pre-computing second guesses for ${allKeys.length} keys...`)
@@ -68,7 +68,11 @@ const preComputeSecondGuess = ({ initialGuess, likelyWords }: PreComputeOptions)
       const elapsed = (Date.now() - startTime) / 1000
       const rate = index / elapsed || 0
       const eta = rate > 0 ? (allKeys.length - index) / rate : 0
-      console.log(`Processing key ${index + 1}/${allKeys.length}: ${key} (${elapsed.toFixed(1)}s elapsed, ETA: ${eta.toFixed(1)}s)`)
+      console.log(
+        `Processing key ${index + 1}/${allKeys.length}: ${key} (${elapsed.toFixed(
+          1,
+        )}s elapsed, ETA: ${eta.toFixed(1)}s)`,
+      )
     }
 
     // Filter likelyWords to answers that match this key pattern
@@ -79,7 +83,7 @@ const preComputeSecondGuess = ({ initialGuess, likelyWords }: PreComputeOptions)
         filteredAnswersCount: 0,
         bestGuesses: [],
         maxBins: 0,
-        bestDistribution: Infinity
+        bestDistribution: Infinity,
       }
       return
     }
@@ -88,13 +92,15 @@ const preComputeSecondGuess = ({ initialGuess, likelyWords }: PreComputeOptions)
       // Only one answer possible, any guess that includes it would be optimal
       cache[key] = {
         filteredAnswersCount: 1,
-        bestGuesses: [{
-          word: filteredAnswers[0],
-          bins: 1,
-          distribution: 0
-        }],
+        bestGuesses: [
+          {
+            word: filteredAnswers[0],
+            bins: 1,
+            distribution: 0,
+          },
+        ],
         maxBins: 1,
-        bestDistribution: 0
+        bestDistribution: 0,
       }
       return
     }
@@ -113,7 +119,7 @@ const preComputeSecondGuess = ({ initialGuess, likelyWords }: PreComputeOptions)
       wordBinCounts.push({
         word: potentialGuess,
         bins: numBins,
-        binSizes: bins
+        binSizes: bins,
       })
 
       if (numBins > maxBins) {
@@ -123,7 +129,9 @@ const preComputeSecondGuess = ({ initialGuess, likelyWords }: PreComputeOptions)
       // Perfect separation found - no point checking other words
       if (numBins === perfectSeparation) {
         foundPerfectSeparation = true
-        console.log(`    ⚡ Perfect separation found with "${potentialGuess}" (${numBins} bins for ${perfectSeparation} answers)`)
+        console.log(
+          `    ⚡ Perfect separation found with "${potentialGuess}" (${numBins} bins for ${perfectSeparation} answers)`,
+        )
         break
       }
     }
@@ -131,34 +139,39 @@ const preComputeSecondGuess = ({ initialGuess, likelyWords }: PreComputeOptions)
     // Second pass: among words with maxBins, find the best distribution
     // If we found perfect separation, we only need to consider those words
     const candidateWordsForSecondPass = foundPerfectSeparation
-      ? wordBinCounts.filter(item => item.bins === perfectSeparation)
-      : wordBinCounts.filter(item => item.bins === maxBins)
+      ? wordBinCounts.filter((item) => item.bins === perfectSeparation)
+      : wordBinCounts.filter((item) => item.bins === maxBins)
 
     let bestDistribution = Infinity
     let bestGuesses: BestGuess[] = []
 
-    candidateWordsForSecondPass.forEach(candidate => {
+    candidateWordsForSecondPass.forEach((candidate) => {
       // For perfect separation, distribution is always 0 (each bin has exactly 1 word)
       const variance = foundPerfectSeparation
         ? 0
         : (() => {
-          const mean = filteredAnswers.length / candidate.bins
-          return candidate.binSizes.reduce((sum, binSize) => sum + Math.pow(binSize - mean, 2), 0) / candidate.bins
-        })()
+            const mean = filteredAnswers.length / candidate.bins
+            return (
+              candidate.binSizes.reduce((sum, binSize) => sum + Math.pow(binSize - mean, 2), 0) /
+              candidate.bins
+            )
+          })()
 
       if (variance < bestDistribution) {
         bestDistribution = variance
-        bestGuesses = [{
-          word: candidate.word,
-          bins: candidate.bins,
-          distribution: variance
-        }]
+        bestGuesses = [
+          {
+            word: candidate.word,
+            bins: candidate.bins,
+            distribution: variance,
+          },
+        ]
       } else if (variance === bestDistribution && bestGuesses.length === 0) {
         // Only add the first word with the same best distribution to keep cache compact
         bestGuesses.push({
           word: candidate.word,
           bins: candidate.bins,
-          distribution: variance
+          distribution: variance,
         })
       }
     })
@@ -167,7 +180,7 @@ const preComputeSecondGuess = ({ initialGuess, likelyWords }: PreComputeOptions)
       filteredAnswersCount: filteredAnswers.length,
       bestGuesses: bestGuesses,
       maxBins: maxBins,
-      bestDistribution: bestDistribution
+      bestDistribution: bestDistribution,
     }
   })
 
@@ -195,7 +208,10 @@ const calculateVariance = (binSizes: number[]): number => {
  * @param {Array} candidateWords - Words to test as guesses (will test filtered words first, then all words)
  * @returns {Object} - Best guess choice with bins, variance, etc.
  */
-const findBestGuessSinglePass = (remainingWords: string[], candidateWords: string[] = likelyWords): GuessChoice | null => {
+const findBestGuessSinglePass = (
+  remainingWords: string[],
+  candidateWords: string[] = likelyWords,
+): GuessChoice | null => {
   if (remainingWords.length === 0) {
     return null
   }
@@ -223,7 +239,7 @@ const findBestGuessSinglePass = (remainingWords: string[], candidateWords: strin
         binSizes: bins,
         variance: variance,
         distribution: variance,
-        reason: `PERFECT SEPARATION: Each of ${numBins} remaining words gets its own bin`
+        reason: `PERFECT SEPARATION: Each of ${numBins} remaining words gets its own bin`,
       }
     }
 
@@ -237,7 +253,9 @@ const findBestGuessSinglePass = (remainingWords: string[], candidateWords: strin
         binSizes: bins,
         variance: variance,
         distribution: variance,
-        reason: `Maximizes bins (${numBins}) with optimal distribution variance (${variance.toFixed(2)})`
+        reason: `Maximizes bins (${numBins}) with optimal distribution variance (${variance.toFixed(
+          2,
+        )})`,
       }
     }
   }
@@ -267,6 +285,18 @@ const getAllKeys = (): string[] => {
   return result
 }
 
+const getPossibleKeys = (initialGuess: string, candidates: string[]): string[] => {
+  const keys = new Set<string>()
+  for (const candidate of candidates) {
+    const bins = getBins(initialGuess, [candidate], { returnObject: true }) as Record<
+      string,
+      string[]
+    >
+    Object.keys(bins).forEach((key) => keys.add(key))
+  }
+  return Array.from(keys).sort()
+}
+
 /**
  * Get optimal second guess for a given starting word and evaluation
  * Handles cache lookup, on-demand calculation, and optional full cache generation
@@ -277,7 +307,11 @@ const getAllKeys = (): string[] => {
  * @param {boolean} options.silent - If true, suppresses console output
  * @returns {Object|null} - Optimal guess recommendation or null if no valid options
  */
-const getOptimalGuess = async (initialGuess: string, evaluation: string, options: GetOptimalOptions = {}): Promise<OptimalGuessResult | null> => {
+const getOptimalGuess = async (
+  initialGuess: string,
+  evaluation: string,
+  options: GetOptimalOptions = {},
+): Promise<OptimalGuessResult | null> => {
   const { generateFullCache = false, silent = false } = options
 
   if (!silent) {
@@ -310,11 +344,11 @@ const getOptimalGuess = async (initialGuess: string, evaluation: string, options
       if (keyData.filteredAnswersCount === 1) {
         const result: OptimalGuessResult = {
           recommendation: keyData.bestGuesses[0].word,
-          reason: "Only one possible answer remains",
+          reason: 'Only one possible answer remains',
           remainingAnswers: 1,
           cached: true,
           bins: keyData.bestGuesses[0].bins,
-          distribution: keyData.bestGuesses[0].distribution
+          distribution: keyData.bestGuesses[0].distribution,
         }
 
         if (!silent) {
@@ -326,11 +360,13 @@ const getOptimalGuess = async (initialGuess: string, evaluation: string, options
       const bestGuess = keyData.bestGuesses[0]
       const result: OptimalGuessResult = {
         recommendation: bestGuess.word,
-        reason: `Maximizes bins (${bestGuess.bins}) with lowest distribution variance (${bestGuess.distribution.toFixed(2)})`,
+        reason: `Maximizes bins (${
+          bestGuess.bins
+        }) with lowest distribution variance (${bestGuess.distribution.toFixed(2)})`,
         remainingAnswers: keyData.filteredAnswersCount,
         cached: true,
         bins: bestGuess.bins,
-        distribution: bestGuess.distribution
+        distribution: bestGuess.distribution,
       }
 
       if (!silent) {
@@ -354,7 +390,7 @@ const getOptimalGuess = async (initialGuess: string, evaluation: string, options
 
       cache = preComputeSecondGuess({
         initialGuess,
-        likelyWords
+        likelyWords,
       })
       await cacheDB.saveCache(initialGuess, cache)
 
@@ -364,7 +400,9 @@ const getOptimalGuess = async (initialGuess: string, evaluation: string, options
     } else {
       // Calculate just this specific evaluation on-demand
       if (!silent) {
-        console.log(`📊 Cache missing for ${initialGuess}. Calculating on-demand for ${evaluation}...`)
+        console.log(
+          `📊 Cache missing for ${initialGuess}. Calculating on-demand for ${evaluation}...`,
+        )
       }
 
       cache = await calculateSingleEvaluation(initialGuess, evaluation, silent)
@@ -385,11 +423,11 @@ const getOptimalGuess = async (initialGuess: string, evaluation: string, options
   if (keyData.filteredAnswersCount === 1) {
     const result: OptimalGuessResult = {
       recommendation: keyData.bestGuesses[0].word,
-      reason: "Only one possible answer remains",
+      reason: 'Only one possible answer remains',
       remainingAnswers: 1,
       cached: false, // This came from on-demand calculation
       bins: keyData.bestGuesses[0].bins,
-      distribution: keyData.bestGuesses[0].distribution
+      distribution: keyData.bestGuesses[0].distribution,
     }
 
     if (!silent) {
@@ -401,11 +439,13 @@ const getOptimalGuess = async (initialGuess: string, evaluation: string, options
   const bestGuess = keyData.bestGuesses[0]
   const result: OptimalGuessResult = {
     recommendation: bestGuess.word,
-    reason: `Maximizes bins (${bestGuess.bins}) with lowest distribution variance (${bestGuess.distribution.toFixed(2)})`,
+    reason: `Maximizes bins (${
+      bestGuess.bins
+    }) with lowest distribution variance (${bestGuess.distribution.toFixed(2)})`,
     remainingAnswers: keyData.filteredAnswersCount,
     cached: false, // This came from on-demand calculation
     bins: bestGuess.bins,
-    distribution: bestGuess.distribution
+    distribution: bestGuess.distribution,
   }
 
   if (!silent) {
@@ -423,7 +463,11 @@ const getOptimalGuess = async (initialGuess: string, evaluation: string, options
  * @param {boolean} silent - Whether to suppress output
  * @returns {Object} - Cache object with single evaluation
  */
-const calculateSingleEvaluation = async (initialGuess: string, evaluation: string, silent: boolean = false): Promise<Cache> => {
+const calculateSingleEvaluation = async (
+  initialGuess: string,
+  evaluation: string,
+  silent: boolean = false,
+): Promise<Cache> => {
   if (!silent) {
     console.log(`🔄 Computing optimal guess for ${initialGuess} → ${evaluation}...`)
   }
@@ -437,8 +481,8 @@ const calculateSingleEvaluation = async (initialGuess: string, evaluation: strin
         filteredAnswersCount: 0,
         bestGuesses: [],
         maxBins: 0,
-        bestDistribution: Infinity
-      }
+        bestDistribution: Infinity,
+      },
     }
   }
 
@@ -446,14 +490,16 @@ const calculateSingleEvaluation = async (initialGuess: string, evaluation: strin
     return {
       [evaluation]: {
         filteredAnswersCount: 1,
-        bestGuesses: [{
-          word: filteredAnswers[0],
-          bins: 1,
-          distribution: 0
-        }],
+        bestGuesses: [
+          {
+            word: filteredAnswers[0],
+            bins: 1,
+            distribution: 0,
+          },
+        ],
         maxBins: 1,
-        bestDistribution: 0
-      }
+        bestDistribution: 0,
+      },
     }
   }
 
@@ -464,29 +510,40 @@ const calculateSingleEvaluation = async (initialGuess: string, evaluation: strin
   let foundPerfectSeparation = false
 
   if (!silent) {
-    console.log(`   🎯 Step 1: Testing ${filteredAnswers.length} remaining words for perfect separation...`)
+    console.log(
+      `   🎯 Step 1: Testing ${filteredAnswers.length} remaining words for perfect separation...`,
+    )
   }
 
   // STEP 1: Test remaining words for perfect separation
   for (const candidate of filteredAnswers) {
     try {
-      const bins = getBins(candidate, filteredAnswers, { returnObject: true }) as Record<string, number | string[]>
+      const bins = getBins(candidate, filteredAnswers, { returnObject: true }) as Record<
+        string,
+        number | string[]
+      >
       const numBins = Object.keys(bins).length
-      const distribution = calculateVariance(Object.values(bins).map(v => typeof v === 'number' ? v : v.length)) // bins values are already counts
+      const distribution = calculateVariance(
+        Object.values(bins).map((v) => (typeof v === 'number' ? v : v.length)),
+      ) // bins values are already counts
 
       // Perfect separation: each remaining word goes to its own bin
       if (numBins === filteredAnswers.length) {
         if (!silent) {
-          console.log(`    ⚡ Perfect separation found with "${candidate}" (${numBins} bins for ${filteredAnswers.length} answers)`)
+          console.log(
+            `    ⚡ Perfect separation found with "${candidate}" (${numBins} bins for ${filteredAnswers.length} answers)`,
+          )
         }
 
         // With perfect separation, any of these words will solve in one more guess
         // Prefer the candidate itself as it's from the remaining words
-        bestGuesses = [{
-          word: candidate,
-          bins: numBins,
-          distribution: 0 // Perfect separation always has 0 variance
-        }]
+        bestGuesses = [
+          {
+            word: candidate,
+            bins: numBins,
+            distribution: 0, // Perfect separation always has 0 variance
+          },
+        ]
         maxBins = numBins
         bestDistribution = 0
         foundPerfectSeparation = true
@@ -507,7 +564,7 @@ const calculateSingleEvaluation = async (initialGuess: string, evaluation: strin
         bestGuesses.push({
           word: candidate,
           bins: numBins,
-          distribution: distribution
+          distribution: distribution,
         })
       }
     } catch (error) {
@@ -528,27 +585,36 @@ const calculateSingleEvaluation = async (initialGuess: string, evaluation: strin
       // Show progress for longer calculations
       if (!silent && i % 1000 === 0 && i > 0) {
         const elapsed = (Date.now() - startTime) / 1000
-        const progress = (i / likelyWords.length * 100).toFixed(1)
+        const progress = ((i / likelyWords.length) * 100).toFixed(1)
         console.log(`     Progress: ${progress}% (${elapsed.toFixed(1)}s elapsed)`)
       }
 
       try {
-        const bins = getBins(candidate, filteredAnswers, { returnObject: true }) as Record<string, number | string[]>
+        const bins = getBins(candidate, filteredAnswers, { returnObject: true }) as Record<
+          string,
+          number | string[]
+        >
         const numBins = Object.keys(bins).length
-        const distribution = calculateVariance(Object.values(bins).map(v => typeof v === 'number' ? v : v.length)) // bins values are already counts
+        const distribution = calculateVariance(
+          Object.values(bins).map((v) => (typeof v === 'number' ? v : v.length)),
+        ) // bins values are already counts
 
         // Check if this achieves perfect separation
         if (numBins === filteredAnswers.length) {
           if (!silent) {
-            console.log(`    ⚡ Perfect separation found with "${candidate}" (${numBins} bins for ${filteredAnswers.length} answers)`)
+            console.log(
+              `    ⚡ Perfect separation found with "${candidate}" (${numBins} bins for ${filteredAnswers.length} answers)`,
+            )
           }
 
           // Perfect separation trumps everything
-          bestGuesses = [{
-            word: candidate,
-            bins: numBins,
-            distribution: 0
-          }]
+          bestGuesses = [
+            {
+              word: candidate,
+              bins: numBins,
+              distribution: 0,
+            },
+          ]
           maxBins = numBins
           bestDistribution = 0
           foundPerfectSeparation = true
@@ -569,7 +635,7 @@ const calculateSingleEvaluation = async (initialGuess: string, evaluation: strin
           bestGuesses.push({
             word: candidate,
             bins: numBins,
-            distribution: distribution
+            distribution: distribution,
           })
         }
       } catch (error) {
@@ -584,19 +650,19 @@ const calculateSingleEvaluation = async (initialGuess: string, evaluation: strin
       filteredAnswersCount: filteredAnswers.length,
       bestGuesses: bestGuesses.slice(0, 5), // Keep top 5
       maxBins,
-      bestDistribution
-    }
+      bestDistribution,
+    },
   }
 
   if (!silent) {
     const elapsed = (Date.now() - startTime) / 1000
-    const strategy = foundPerfectSeparation ? "Perfect separation" : `Best bins (${maxBins})`
+    const strategy = foundPerfectSeparation ? 'Perfect separation' : `Best bins (${maxBins})`
     console.log(`✅ Calculation completed in ${elapsed.toFixed(1)}s - ${strategy}`)
   }
 
   // Optionally cache this single result for future use
   try {
-    const existingCache = await cacheDB.cacheExists(initialGuess)
+    const existingCache = (await cacheDB.cacheExists(initialGuess))
       ? await cacheDB.loadCache(initialGuess)
       : {}
 
@@ -620,15 +686,15 @@ const calculateSingleEvaluation = async (initialGuess: string, evaluation: strin
  * Preserves already-computed values
  */
 const buildCacheIncremental = async (initialGuess: string): Promise<void> => {
-  console.log(`\n� Building cache incrementally for ${initialGuess}`)
-  
-  const allKeys = getAllKeys()
+  console.log(`\n Building cache incrementally for ${initialGuess}`)
+
+  const allKeys = getPossibleKeys(initialGuess, likelyWords)
   console.log(`📋 Total possible patterns: ${allKeys.length}`)
 
   // Load existing cache if it exists
   let existingCache: Cache = {}
   const cacheExists = await cacheDB.cacheExists(initialGuess)
-  
+
   if (cacheExists) {
     existingCache = await cacheDB.loadCache(initialGuess)
     const existingCount = Object.keys(existingCache).length
@@ -638,7 +704,7 @@ const buildCacheIncremental = async (initialGuess: string): Promise<void> => {
   }
 
   // Find missing keys
-  const missingKeys = allKeys.filter(key => !existingCache[key])
+  const missingKeys = allKeys.filter((key) => !existingCache[key])
   console.log(`❓ Missing patterns: ${missingKeys.length}`)
 
   if (missingKeys.length === 0) {
@@ -659,7 +725,11 @@ const buildCacheIncremental = async (initialGuess: string): Promise<void> => {
       const elapsed = (Date.now() - startTime) / 1000
       const rate = i / elapsed || 0
       const eta = rate > 0 ? (missingKeys.length - i) / rate : 0
-      console.log(`Processing key ${i + 1}/${missingKeys.length}: ${key} (${elapsed.toFixed(1)}s elapsed, ETA: ${eta.toFixed(1)}s)`)
+      console.log(
+        `Processing key ${i + 1}/${missingKeys.length}: ${key} (${elapsed.toFixed(
+          1,
+        )}s elapsed, ETA: ${eta.toFixed(1)}s)`,
+      )
     }
 
     // Filter likelyWords to answers that match this key pattern
@@ -670,7 +740,7 @@ const buildCacheIncremental = async (initialGuess: string): Promise<void> => {
         filteredAnswersCount: 0,
         bestGuesses: [],
         maxBins: 0,
-        bestDistribution: Infinity
+        bestDistribution: Infinity,
       }
       continue
     }
@@ -678,13 +748,15 @@ const buildCacheIncremental = async (initialGuess: string): Promise<void> => {
     if (filteredAnswers.length === 1) {
       newCacheEntries[key] = {
         filteredAnswersCount: 1,
-        bestGuesses: [{
-          word: filteredAnswers[0],
-          bins: 1,
-          distribution: 0
-        }],
+        bestGuesses: [
+          {
+            word: filteredAnswers[0],
+            bins: 1,
+            distribution: 0,
+          },
+        ],
         maxBins: 1,
-        bestDistribution: 0
+        bestDistribution: 0,
       }
       continue
     }
@@ -702,7 +774,7 @@ const buildCacheIncremental = async (initialGuess: string): Promise<void> => {
       wordBinCounts.push({
         word: potentialGuess,
         bins: numBins,
-        binSizes: bins
+        binSizes: bins,
       })
 
       if (numBins > maxBins) {
@@ -717,32 +789,37 @@ const buildCacheIncremental = async (initialGuess: string): Promise<void> => {
 
     // Second pass: among words with maxBins, find the best distribution
     const candidateWordsForSecondPass = foundPerfectSeparation
-      ? wordBinCounts.filter(item => item.bins === perfectSeparation)
-      : wordBinCounts.filter(item => item.bins === maxBins)
+      ? wordBinCounts.filter((item) => item.bins === perfectSeparation)
+      : wordBinCounts.filter((item) => item.bins === maxBins)
 
     let bestDistribution = Infinity
     let bestGuesses: BestGuess[] = []
 
-    candidateWordsForSecondPass.forEach(candidate => {
+    candidateWordsForSecondPass.forEach((candidate) => {
       const variance = foundPerfectSeparation
         ? 0
         : (() => {
-          const mean = filteredAnswers.length / candidate.bins
-          return candidate.binSizes.reduce((sum, binSize) => sum + Math.pow(binSize - mean, 2), 0) / candidate.bins
-        })()
+            const mean = filteredAnswers.length / candidate.bins
+            return (
+              candidate.binSizes.reduce((sum, binSize) => sum + Math.pow(binSize - mean, 2), 0) /
+              candidate.bins
+            )
+          })()
 
       if (variance < bestDistribution) {
         bestDistribution = variance
-        bestGuesses = [{
-          word: candidate.word,
-          bins: candidate.bins,
-          distribution: variance
-        }]
+        bestGuesses = [
+          {
+            word: candidate.word,
+            bins: candidate.bins,
+            distribution: variance,
+          },
+        ]
       } else if (variance === bestDistribution && bestGuesses.length === 0) {
         bestGuesses.push({
           word: candidate.word,
           bins: candidate.bins,
-          distribution: variance
+          distribution: variance,
         })
       }
     })
@@ -751,17 +828,19 @@ const buildCacheIncremental = async (initialGuess: string): Promise<void> => {
       filteredAnswersCount: filteredAnswers.length,
       bestGuesses: bestGuesses,
       maxBins: maxBins,
-      bestDistribution: bestDistribution
+      bestDistribution: bestDistribution,
     }
   }
 
   const totalTime = (Date.now() - startTime) / 1000
-  console.log(`\n✅ Computation completed in ${totalTime.toFixed(1)}s for ${missingKeys.length} patterns`)
+  console.log(
+    `\n✅ Computation completed in ${totalTime.toFixed(1)}s for ${missingKeys.length} patterns`,
+  )
 
   // Merge with existing cache
   const mergedCache = { ...existingCache, ...newCacheEntries }
   console.log(`💾 Saving merged cache with ${Object.keys(mergedCache).length} total entries...`)
-  
+
   await cacheDB.saveCache(initialGuess, mergedCache)
 
   // Verify
@@ -806,11 +885,12 @@ const run = async (): Promise<void> => {
         message: 'What would you like to do?',
         choices: [
           { name: '🔨 Build cache incrementally (recommended)', value: 'build' },
-          { name: '🔄 Rebuild cache from scratch', value: 'rebuild' },
+          { name: '🔄 Rebuild cache for a specific word', value: 'rebuild' },
+          { name: '🗑️  Delete cache for a specific word', value: 'delete' },
           { name: '📊 Check cache status', value: 'check' },
-          { name: '❌ Exit', value: 'exit' }
-        ]
-      }
+          { name: '❌ Exit', value: 'exit' },
+        ],
+      },
     ])
 
     if (mainAction === 'exit') {
@@ -833,10 +913,10 @@ const run = async (): Promise<void> => {
           }
           return true
         },
-        transformer: (value: string) => value.toUpperCase()
-      }
+        transformer: (value: string) => value.toUpperCase(),
+      },
     ])
-    
+
     // Normalize to uppercase
     const initialGuess = rawInput.initialGuess.toUpperCase()
 
@@ -853,8 +933,8 @@ const run = async (): Promise<void> => {
               type: 'confirm',
               name: 'confirmRebuild',
               message: `⚠️  This will delete and rebuild the entire cache for ${initialGuess}. Continue?`,
-              default: false
-            }
+              default: false,
+            },
           ])
 
           if (confirmRebuild) {
@@ -867,7 +947,7 @@ const run = async (): Promise<void> => {
 
             const cache = preComputeSecondGuess({
               initialGuess,
-              likelyWords
+              likelyWords,
             })
 
             console.log(`💾 Saving ${Object.keys(cache).length} cache entries to database...`)
@@ -887,6 +967,26 @@ const run = async (): Promise<void> => {
           }
           break
 
+        case 'delete':
+          const { confirmDelete } = await inquirer.prompt([
+            {
+              type: 'confirm',
+              name: 'confirmDelete',
+              message: `⚠️  This will delete the cache for ${initialGuess}. Continue?`,
+              default: false,
+            },
+          ])
+
+          if (confirmDelete) {
+            console.log()
+            console.log(`🗑️  Deleting cache for ${initialGuess}...`)
+            await cacheDB.deleteCache(initialGuess)
+            console.log(`✅ Cache deleted successfully`)
+          } else {
+            console.log('\n⏭️  Delete cancelled')
+          }
+          break
+
         case 'check':
           console.log()
           console.log(`🔍 Checking cache status for ${initialGuess}...`)
@@ -895,12 +995,15 @@ const run = async (): Promise<void> => {
           if (exists) {
             const cache = await cacheDB.loadCache(initialGuess)
             const cacheSize = Object.keys(cache).length
-            const totalPossibleKeys = 243
+            const allKeys = getPossibleKeys(initialGuess, likelyWords)
+            const totalPossibleKeys = allKeys.length
 
             console.log(`\n✅ Cache exists with ${cacheSize}/${totalPossibleKeys} entries`)
 
             if (cacheSize < totalPossibleKeys) {
-              console.log(`⚠️  Cache is incomplete (missing ${totalPossibleKeys - cacheSize} patterns)`)
+              console.log(
+                `⚠️  Cache is incomplete (missing ${totalPossibleKeys - cacheSize} patterns)`,
+              )
               console.log(`💡 Run "Build cache incrementally" to fill in missing patterns`)
             } else {
               console.log(`🎉 Cache is complete!`)
@@ -911,7 +1014,9 @@ const run = async (): Promise<void> => {
             if (samples.length > 0) {
               console.log(`\n📋 Sample entries:`)
               samples.forEach(([key, data]: any) => {
-                console.log(`   ${key}: ${data.filteredAnswersCount} answers → "${data.bestGuesses[0].word}" (${data.bestGuesses[0].bins} bins)`)
+                console.log(
+                  `   ${key}: ${data.filteredAnswersCount} answers → "${data.bestGuesses[0].word}" (${data.bestGuesses[0].bins} bins)`,
+                )
               })
             }
           } else {
@@ -930,8 +1035,8 @@ const run = async (): Promise<void> => {
         type: 'confirm',
         name: 'continueMenu',
         message: 'Would you like to continue?',
-        default: true
-      }
+        default: true,
+      },
     ])
 
     continueLoop = continueMenu
@@ -958,6 +1063,7 @@ Commands:
   build <initial_guess>        Build cache incrementally - only compute missing patterns
   ensure <initial_guess>       Alias for build command
   rebuild <initial_guess>      Force complete rebuild of cache (deletes existing data)
+  delete <initial_guess>       Delete cache for a specific word
   check <initial_guess>        Check if cache exists and display its contents
   DUMMY <initial_guess>        Alias for build command
 
@@ -1012,7 +1118,7 @@ Or run with no arguments for interactive menu:
 
         const cache = preComputeSecondGuess({
           initialGuess,
-          likelyWords
+          likelyWords,
         })
 
         console.log(`💾 Saving ${Object.keys(cache).length} cache entries to database...`)
@@ -1029,6 +1135,12 @@ Or run with no arguments for interactive menu:
         }
         break
 
+      case 'delete':
+        console.log(`🗑️  Deleting cache for ${initialGuess}...`)
+        await cacheDB.deleteCache(initialGuess)
+        console.log(`✅ Cache deleted successfully`)
+        break
+
       case 'check':
         console.log(`\n🔍 Checking cache status for ${initialGuess}...`)
         const exists = await cacheDB.cacheExists(initialGuess)
@@ -1036,7 +1148,8 @@ Or run with no arguments for interactive menu:
         if (exists) {
           const checkCache = await cacheDB.loadCache(initialGuess)
           const cacheSize = Object.keys(checkCache).length
-          const totalPossibleKeys = 243
+          const allKeys = getPossibleKeys(initialGuess, likelyWords)
+          const totalPossibleKeys = allKeys.length
           console.log(`✅ Cache exists with ${cacheSize}/${totalPossibleKeys} entries`)
 
           if (cacheSize < totalPossibleKeys) {
@@ -1049,7 +1162,9 @@ Or run with no arguments for interactive menu:
           if (samples.length > 0) {
             console.log(`\n📋 Sample entries:`)
             samples.forEach(([key, data]: any) => {
-              console.log(`   ${key}: ${data.filteredAnswersCount} answers → "${data.bestGuesses[0].word}" (${data.bestGuesses[0].bins} bins)`)
+              console.log(
+                `   ${key}: ${data.filteredAnswersCount} answers → "${data.bestGuesses[0].word}" (${data.bestGuesses[0].bins} bins)`,
+              )
             })
           }
         } else {
@@ -1059,7 +1174,9 @@ Or run with no arguments for interactive menu:
 
       default:
         console.log(`❌ Unknown command: ${command}`)
-        console.log('Use "build", "rebuild", "check", "ensure", or "DUMMY" followed by a 5-letter word')
+        console.log(
+          'Use "build", "rebuild", "check", "ensure", or "DUMMY" followed by a 5-letter word',
+        )
         process.exit(1)
     }
   } catch (error: any) {
@@ -1073,11 +1190,13 @@ export { buildCacheIncremental, getOptimalGuess, findBestGuessSinglePass }
 
 // Run if this file is executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  run().then(() => {
-    console.log('\n✅ Done!')
-    process.exit(0)
-  }).catch((error: any) => {
-    console.error('❌ Fatal error:', error)
-    process.exit(1)
-  })
+  run()
+    .then(() => {
+      console.log('\n✅ Done!')
+      process.exit(0)
+    })
+    .catch((error: any) => {
+      console.error('❌ Fatal error:', error)
+      process.exit(1)
+    })
 }
