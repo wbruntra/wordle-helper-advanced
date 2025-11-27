@@ -74,41 +74,45 @@ function GameAnalysisModal({ show, handleClose, guesses, wordList, answer = null
     <Modal show={show} onHide={handleClose} size="lg" centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
-          Game Analysis - Turn {currentTurn + 1} of {guesses.length}
+          How You Did — Guess {currentTurn + 1} of {guesses.length}
         </Modal.Title>
       </Modal.Header>
       <Modal.Body>
         {currentAnalysis ? (
           <div>
             <div className="mb-4">
-              <h5>Remaining Possible Words: {currentAnalysis.filteredWordListSize}</h5>
+              <h5>
+                {currentAnalysis.filteredWordListSize === 1
+                  ? 'Only 1 word left — you\'ve got it!'
+                  : `${currentAnalysis.filteredWordListSize} possible words remaining`}
+              </h5>
             </div>
 
             <div className="row g-3">
               {/* User's Guess Analysis */}
               <div className="col-12 col-lg-6">
                 <div className="h-100 p-3 border rounded">
-                  <h5 className="mb-3">Your Guess</h5>
+                  <h5 className="mb-3">What You Played</h5>
                   <div className="mb-3">
                     <ResponsiveGuess guess={currentGuess} size="md" />
                   </div>
                   <div className="row">
                     <div className="col-12">
                       <p className="mb-1">
-                        <strong>Unique Patterns:</strong>{' '}
+                        <strong>Patterns created:</strong>{' '}
                         {currentAnalysis.userGuess.analysis.binsCount}
                       </p>
                       <p className="mb-1">
-                        <strong>Avg Bin Size:</strong>{' '}
+                        <strong>Avg words per pattern:</strong>{' '}
                         {currentAnalysis.userGuess.analysis.avgBinSize.toFixed(2)}
                       </p>
                       <p className="mb-1">
-                        <strong>Dist. Score:</strong>{' '}
+                        <strong>Information score:</strong>{' '}
                         {currentAnalysis.comparison.distributionScore.user.toFixed(2)}
                       </p>
                       <p className="mb-0">
-                        <strong>Bin Range:</strong> {currentAnalysis.userGuess.analysis.minBinSize}{' '}
-                        - {currentAnalysis.userGuess.analysis.maxBinSize}
+                        <strong>Pattern size range:</strong> {currentAnalysis.userGuess.analysis.minBinSize}{' '}
+                        to {currentAnalysis.userGuess.analysis.maxBinSize}
                       </p>
                     </div>
                   </div>
@@ -118,7 +122,7 @@ function GameAnalysisModal({ show, handleClose, guesses, wordList, answer = null
               {/* Optimal Guess Analysis */}
               <div className="col-12 col-lg-6">
                 <div className="h-100 p-3 border rounded bg-secondary">
-                  <h5 className="mb-3">Optimal Guess</h5>
+                  <h5 className="mb-3">Best Available Move</h5>
                   {optimalAnalysis && optimalWord ? (
                     <>
                       <div className="mb-3">
@@ -127,17 +131,17 @@ function GameAnalysisModal({ show, handleClose, guesses, wordList, answer = null
                       <div className="row">
                         <div className="col-12">
                           <p className="mb-1">
-                            <strong>Unique Patterns:</strong> {optimalAnalysis.binsCount}
+                            <strong>Patterns created:</strong> {optimalAnalysis.binsCount}
                           </p>
                           <p className="mb-1">
-                            <strong>Avg Bin Size:</strong> {optimalAnalysis.avgBinSize.toFixed(2)}
+                            <strong>Avg words per pattern:</strong> {optimalAnalysis.avgBinSize.toFixed(2)}
                           </p>
                           <p className="mb-1">
-                            <strong>Dist. Score:</strong>{' '}
+                            <strong>Information score:</strong>{' '}
                             {currentAnalysis.comparison.distributionScore.optimal.toFixed(2)}
                           </p>
                           <p className="mb-0">
-                            <strong>Bin Range:</strong> {optimalAnalysis.minBinSize} -{' '}
+                            <strong>Pattern size range:</strong> {optimalAnalysis.minBinSize} to{' '}
                             {optimalAnalysis.maxBinSize}
                           </p>
                         </div>
@@ -146,7 +150,7 @@ function GameAnalysisModal({ show, handleClose, guesses, wordList, answer = null
                   ) : (
                     <p className="mb-0">
                       {optimalReason ||
-                        'Optimal guess unavailable for this turn due to data limits.'}
+                        'We couldn\'t calculate the best move for this turn — too many possibilities to analyze.'}
                     </p>
                   )}
                 </div>
@@ -155,46 +159,48 @@ function GameAnalysisModal({ show, handleClose, guesses, wordList, answer = null
 
             {/* Comparison Summary */}
             <div className="mt-4 p-3 border rounded">
-              <h5 className="mb-3">Comparison</h5>
+              <h5 className="mb-3">The Verdict</h5>
               <p>
-                <strong>Patterns Advantage:</strong>{' '}
                 {typeof currentAnalysis.comparison.binsAdvantage === 'number' ? (
                   currentAnalysis.comparison.binsAdvantage > 0 ? (
                     <span className="text-warning">
-                      Optimal creates {currentAnalysis.comparison.binsAdvantage} more unique
-                      patterns
+                      The best move would have created {currentAnalysis.comparison.binsAdvantage} more
+                      pattern{currentAnalysis.comparison.binsAdvantage !== 1 ? 's' : ''}, giving you more information to work with.
                     </span>
                   ) : currentAnalysis.comparison.binsAdvantage === 0 ? (
-                    <span className="text-success">Your guess is optimal!</span>
+                    <span className="text-success">Nice! You played the optimal move. 🎯</span>
                   ) : (
                     <span className="text-success">
-                      Your guess creates {Math.abs(currentAnalysis.comparison.binsAdvantage)} more
-                      unique patterns!
+                      Great choice! Your guess actually created {Math.abs(currentAnalysis.comparison.binsAdvantage)} more
+                      pattern{Math.abs(currentAnalysis.comparison.binsAdvantage) !== 1 ? 's' : ''} than our suggestion! 🌟
                     </span>
                   )
                 ) : (
-                  <span className="text-muted">Comparison unavailable.</span>
+                  <span className="text-muted">We couldn't compare this turn.</span>
                 )}
               </p>
               <p className="mb-0">
-                <strong>Score Difference:</strong>{' '}
+                <strong>Score difference:</strong>{' '}
                 {typeof currentAnalysis.comparison.distributionScore.optimal === 'number'
-                  ? (
-                      currentAnalysis.comparison.distributionScore.optimal -
-                      currentAnalysis.comparison.distributionScore.user
-                    ).toFixed(2)
+                  ? (() => {
+                      const diff = (
+                        currentAnalysis.comparison.distributionScore.optimal -
+                        currentAnalysis.comparison.distributionScore.user
+                      ).toFixed(2)
+                      return diff > 0 ? `+${diff} for best move` : diff < 0 ? `You did ${Math.abs(diff)} better!` : 'Even'
+                    })()
                   : 'N/A'}
               </p>
               {optimalReason && (
                 <p className="text-muted mt-2 mb-0">
-                  <strong>Note:</strong> {optimalReason}
+                  <em>{optimalReason}</em>
                 </p>
               )}
             </div>
           </div>
         ) : (
           <div className="text-center py-5">
-            <p>Loading analysis...</p>
+            <p>Crunching the numbers...</p>
           </div>
         )}
       </Modal.Body>
@@ -206,10 +212,10 @@ function GameAnalysisModal({ show, handleClose, guesses, wordList, answer = null
             disabled={currentTurn === 0}
             className="flex-grow-1 me-2"
           >
-            &lt; Prev
+            ← Previous
           </Button>
           <span className="text-nowrap mx-2">
-            {currentTurn + 1} / {guesses.length}
+            Guess {currentTurn + 1} of {guesses.length}
           </span>
           <Button
             variant="secondary"
@@ -217,7 +223,7 @@ function GameAnalysisModal({ show, handleClose, guesses, wordList, answer = null
             disabled={currentTurn === guesses.length - 1}
             className="flex-grow-1 ms-2"
           >
-            Next &gt;
+            Next →
           </Button>
         </div>
       </Modal.Footer>
