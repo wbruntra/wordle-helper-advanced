@@ -40,8 +40,8 @@ function Wordle() {
 
   const dispatch = useDispatch()
   const navigate = useNavigate()
-  const modals = useSelector(state => state.ui.modals)
-  const guesses = useSelector(state => state.game.guesses)
+  const modals = useSelector((state) => state.ui.modals)
+  const guesses = useSelector((state) => state.game.guesses)
 
   useEffect(() => {
     let newFilteredList = wordLists[wordListName].slice()
@@ -91,11 +91,11 @@ function Wordle() {
   return (
     <div>
       <Container className="mt-3">
-        <div className="d-flex justify-content-between align-items-center">
-          <h3 className="mb-4">Wordle Helper</h3>
+        <div className="d-flex justify-content-between align-items-center flex-nowrap">
+          <h3 className="mb-4 flex-shrink-1">Wordle Helper</h3>
 
-          <div className="d-flex justify-content-end mb-4">
-            <div>
+          <div className="d-flex justify-content-end mb-4 flex-shrink-0">
+            <div className="d-flex flex-nowrap">
               <span
                 className="selectable me-3"
                 onClick={() => navigate('/auto-play')}
