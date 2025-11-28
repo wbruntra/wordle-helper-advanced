@@ -3,7 +3,7 @@ import randomstring from 'randomstring'
 import path from 'path'
 import s3 from '../bunS3'
 import config from '../config'
-import { getGuesses } from '../getGuesses'
+import { getGuessesFromImage } from '../getGuessesFromImage'
 
 const router = express.Router()
 
@@ -77,8 +77,8 @@ router.post(
         return res.status(400).json({ error: 'fileUrl is required and must be a valid URL string' })
       }
 
-      // Call the getGuesses function with proper typing
-      const result = await getGuesses(fileUrl)
+      // Call the getGuessesFromImage function with proper typing
+      const result = await getGuessesFromImage(fileUrl)
 
       res.json(result)
     } catch (error) {

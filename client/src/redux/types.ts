@@ -16,6 +16,7 @@ export interface GameState {
   guesses: Guess[]
   useTodaysWord: boolean
   todaysWord: string | null
+  todaysWordDate: string | null
 }
 
 /**

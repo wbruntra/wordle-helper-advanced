@@ -90,7 +90,7 @@ The response should correspond to this format ${JSON.stringify(
 `
 
   return openai.responses.create({
-    model: 'gpt-4o-2024-08-06',
+    model: 'gpt-5-mini',
     input: [
       {
         role: 'user',
@@ -173,4 +173,5 @@ if (require.main === module) {
   })
 }
 
-module.exports = { getGuessesFromImage, getWordsGuessed }
+// Export getGuessesFromImage as getGuesses as well for backward compatibility
+module.exports = { getGuessesFromImage, getWordsGuessed, getGuesses: getGuessesFromImage }

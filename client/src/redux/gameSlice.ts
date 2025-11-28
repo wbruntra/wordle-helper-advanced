@@ -6,6 +6,7 @@ const initialState: GameState = {
   guesses: [],
   useTodaysWord: true,
   todaysWord: null,
+  todaysWordDate: null,
 }
 
 interface AddGuessPayload {
@@ -59,8 +60,12 @@ const gameSlice = createSlice({
     setTodaysWord: (state, action: PayloadAction<string | null>) => {
       state.todaysWord = action.payload
     },
+
+    setTodaysWordDate: (state, action: PayloadAction<string | null>) => {
+      state.todaysWordDate = action.payload
+    },
   },
 })
 
-export const { addGuess, removeGuess, updateGuess, resetGuesses, setGuesses, setUseTodaysWord, setTodaysWord } = gameSlice.actions
+export const { addGuess, removeGuess, updateGuess, resetGuesses, setGuesses, setUseTodaysWord, setTodaysWord, setTodaysWordDate } = gameSlice.actions
 export default gameSlice.reducer

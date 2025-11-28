@@ -5,7 +5,7 @@ import { AiOutlineBarChart } from 'react-icons/ai'
 import { FaRobot } from 'react-icons/fa6'
 import { useSelector, useDispatch } from 'react-redux'
 import { setModalState } from './redux/uiSlice'
-import { addGuess, updateGuess, setGuesses, setTodaysWord } from './redux/gameSlice'
+import { addGuess, updateGuess, setGuesses, setTodaysWord, setTodaysWordDate } from './redux/gameSlice'
 import { useNavigate } from 'react-router-dom'
 import { Container, Card, Form, Button, Alert, Row, Col } from 'react-bootstrap'
 import { trpc } from './trpc'
@@ -45,6 +45,7 @@ function Wordle() {
   const guesses = useSelector((state) => state.game.guesses)
   const useTodaysWord = useSelector((state) => state.game.useTodaysWord)
   const todaysWord = useSelector((state) => state.game.todaysWord)
+  const todaysWordDate = useSelector((state) => state.game.todaysWordDate)
 
   // Fetch today's word from the backend
   const recentAnswersQuery = trpc.getRecentAnswers.useQuery({ limit: 1 })
@@ -52,11 +53,12 @@ function Wordle() {
   // Update todaysWord in Redux when query data changes
   useEffect(() => {
     if (recentAnswersQuery.data && recentAnswersQuery.data.answers && recentAnswersQuery.data.answers.length > 0) {
-      const latestWord = recentAnswersQuery.data.answers[0].word
-      dispatch(setTodaysWord(latestWord))
+      const latestAnswer = recentAnswersQuery.data.answers[0]
+      dispatch(setTodaysWord(latestAnswer.word))
+      dispatch(setTodaysWordDate(latestAnswer.date))
       // If useTodaysWord is enabled and answerInput is empty, set it
       if (useTodaysWord && !answerInput) {
-        setAnswerInput(latestWord)
+        setAnswerInput(latestAnswer.word)
       }
     }
   }, [recentAnswersQuery.data, dispatch])
@@ -117,7 +119,14 @@ function Wordle() {
     <div>
       <Container className="mt-3">
         <div className="d-flex justify-content-between align-items-center flex-nowrap">
-          <h3 className="mb-4 flex-shrink-1">Wordle Helper</h3>
+          <div className="flex-shrink-1">
+            <h3 className="mb-1">Wordle Helper</h3>
+            {useTodaysWord && todaysWordDate && (
+              <small className="text-muted">
+                Using Wordle from {new Date(todaysWordDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              </small>
+            )}
+          </div>
 
           <div className="d-flex justify-content-end mb-4 flex-shrink-0">
             <div className="d-flex flex-nowrap">
