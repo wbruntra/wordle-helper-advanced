@@ -5,9 +5,10 @@ import { AiOutlineBarChart } from 'react-icons/ai'
 import { FaRobot } from 'react-icons/fa6'
 import { useSelector, useDispatch } from 'react-redux'
 import { setModalState } from './redux/uiSlice'
-import { addGuess, updateGuess, setGuesses } from './redux/gameSlice'
+import { addGuess, updateGuess, setGuesses, setTodaysWord } from './redux/gameSlice'
 import { useNavigate } from 'react-router-dom'
 import { Container, Card, Form, Button, Alert, Row, Col } from 'react-bootstrap'
+import { trpc } from './trpc'
 
 import { evaluateToString } from './advancedUtils'
 // import { commonPlusOfficial, nytAll, nytSolutions } from './wordlists/index'
@@ -42,6 +43,30 @@ function Wordle() {
   const navigate = useNavigate()
   const modals = useSelector((state) => state.ui.modals)
   const guesses = useSelector((state) => state.game.guesses)
+  const useTodaysWord = useSelector((state) => state.game.useTodaysWord)
+  const todaysWord = useSelector((state) => state.game.todaysWord)
+
+  // Fetch today's word from the backend
+  const recentAnswersQuery = trpc.getRecentAnswers.useQuery({ limit: 1 })
+
+  // Update todaysWord in Redux when query data changes
+  useEffect(() => {
+    if (recentAnswersQuery.data && recentAnswersQuery.data.answers && recentAnswersQuery.data.answers.length > 0) {
+      const latestWord = recentAnswersQuery.data.answers[0].word
+      dispatch(setTodaysWord(latestWord))
+      // If useTodaysWord is enabled and answerInput is empty, set it
+      if (useTodaysWord && !answerInput) {
+        setAnswerInput(latestWord)
+      }
+    }
+  }, [recentAnswersQuery.data, dispatch])
+
+  // When useTodaysWord changes, update answerInput accordingly
+  useEffect(() => {
+    if (useTodaysWord && todaysWord) {
+      setAnswerInput(todaysWord)
+    }
+  }, [useTodaysWord, todaysWord])
 
   useEffect(() => {
     let newFilteredList = wordLists[wordListName].slice()
@@ -256,6 +281,7 @@ function Wordle() {
         }}
         answerInput={answerInput}
         setAnswerInput={setAnswerInput}
+        todaysWordLoading={recentAnswersQuery.isLoading}
       />
 
       <UploadScreenShotModal

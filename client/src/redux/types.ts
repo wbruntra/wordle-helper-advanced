@@ -14,6 +14,8 @@ export interface Guess {
 
 export interface GameState {
   guesses: Guess[]
+  useTodaysWord: boolean
+  todaysWord: string | null
 }
 
 /**

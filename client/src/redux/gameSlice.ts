@@ -4,6 +4,8 @@ import type { GameState, Guess } from './types'
 
 const initialState: GameState = {
   guesses: [],
+  useTodaysWord: true,
+  todaysWord: null,
 }
 
 interface AddGuessPayload {
@@ -49,8 +51,16 @@ const gameSlice = createSlice({
     setGuesses: (state, action: PayloadAction<Guess[]>) => {
       state.guesses = action.payload
     },
+
+    setUseTodaysWord: (state, action: PayloadAction<boolean>) => {
+      state.useTodaysWord = action.payload
+    },
+
+    setTodaysWord: (state, action: PayloadAction<string | null>) => {
+      state.todaysWord = action.payload
+    },
   },
 })
 
-export const { addGuess, removeGuess, updateGuess, resetGuesses, setGuesses } = gameSlice.actions
+export const { addGuess, removeGuess, updateGuess, resetGuesses, setGuesses, setUseTodaysWord, setTodaysWord } = gameSlice.actions
 export default gameSlice.reducer
