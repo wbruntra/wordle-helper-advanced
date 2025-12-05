@@ -270,7 +270,8 @@ function DisplayStatus({ guesses, startingList, onGuessClick, answer }: DisplayS
         {currentGuesses.length > 0 && (
           <>
             <div className="d-flex flex-column gap-3 mb-4">
-              {currentGuesses.map((guess, index) => {
+              {[...currentGuesses].reverse().map((guess, reversedIndex) => {
+                const index = currentGuesses.length - 1 - reversedIndex
                 const guessesUpTo = currentGuesses.slice(0, index + 1)
                 const remainingAfter = applyGuesses(startingList, guessesUpTo)
                 const remainingBefore =

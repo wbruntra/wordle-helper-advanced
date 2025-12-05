@@ -190,14 +190,9 @@ function Wordle() {
           <Col lg={6}>
             <Card>
               <Card.Body>
-                {/* <Card.Title>
-                  {editingGuessIndex === null ? 'Add New Guess' : 'Edit Guess'}
-                </Card.Title> */}
-
                 {editingGuessIndex === null && (
                   <Form onSubmit={handleAddGuess}>
-                    <Form.Group className="mb-3">
-                      {/* <Form.Label>Your Guess</Form.Label> */}
+                    <Form.Group className="mb-2">
                       <Form.Control
                         className="font-mono text-uppercase"
                         value={word}
@@ -214,7 +209,7 @@ function Wordle() {
                             setKey(newKey)
                           }
                         }}
-                        placeholder="YOUR GUESS"
+                        placeholder="GUESS HERE"
                         maxLength="5"
                         ref={inputEl}
                       />
@@ -226,13 +221,12 @@ function Wordle() {
                         <Form.Text className="text-muted">Tap boxes to change colors</Form.Text>
                       </>
                     ) : (
-                      <Form.Group className="mb-3">
-                        {/* <Form.Label>Response</Form.Label> */}
+                      <Form.Group className="mb-2">
                         <Form.Control
                           className="font-mono text-uppercase"
                           value={key}
                           onChange={(e) => setKey(e.target.value.toUpperCase())}
-                          placeholder="response"
+                          placeholder="RESPONSE"
                           maxLength="5"
                         />
                         <Form.Text className="text-muted">
