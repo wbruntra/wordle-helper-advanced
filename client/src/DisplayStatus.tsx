@@ -1,5 +1,10 @@
 import { orderEntireWordList } from './utils'
-import { applyGuesses, filterWordsUsingGuessResult, getBins, evaluateToString } from './advancedUtils'
+import {
+  applyGuesses,
+  filterWordsUsingGuessResult,
+  getBins,
+  evaluateToString,
+} from './advancedUtils'
 import { useEffect, useState } from 'react'
 import _ from 'lodash'
 import { BsPencil } from 'react-icons/bs'
@@ -51,12 +56,7 @@ interface ModalGuessData {
 
 type BinObject = Record<string, { [key: string]: string[] | number }>
 
-function DisplayStatus({
-  guesses,
-  startingList,
-  onGuessClick,
-  answer,
-}: DisplayStatusProps) {
+function DisplayStatus({ guesses, startingList, onGuessClick, answer }: DisplayStatusProps) {
   const dispatch = useDispatch()
   const currentGuesses = useSelector((state: RootState) => state.game.guesses)
   const [showDepth, setShowDepth] = useState(false)
@@ -71,7 +71,7 @@ function DisplayStatus({
   const [showBinModal, setShowBinModal] = useState(false)
   const [modalGuessData, setModalGuessData] = useState<ModalGuessData | null>(null)
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
-  
+
   const trpcUtils = trpc.useUtils()
 
   useEffect(() => {
@@ -125,7 +125,10 @@ function DisplayStatus({
         localFiltered = filterWordsUsingGuessResult(guess, localFiltered)
       }
 
-      let newBins: any = getBins(wordToAnalyze, localFiltered, { returnObject: true, showMatches: true })
+      let newBins: any = getBins(wordToAnalyze, localFiltered, {
+        returnObject: true,
+        showMatches: true,
+      })
       newBins = _.map(newBins, (value, key) => ({ [key]: value }))
       newBins = _.sortBy(newBins, (value: any) => (Object.values(value)[0] as any).length)
       setBinsWord(`${wordToAnalyze} (sorting ${localFiltered.length} words)`)
@@ -171,9 +174,9 @@ function DisplayStatus({
     // Get all previous guesses (excluding current one)
     const previousGuesses = currentGuesses
       .filter((_g, i) => i < index)
-      .map(g => ({
+      .map((g) => ({
         word: g.word,
-        key: g.key
+        key: g.key,
       }))
 
     // Apply previous guesses to get the remaining words before this guess
@@ -189,7 +192,7 @@ function DisplayStatus({
     // Calculate bins for this guess
     const binsData = getBins(guess.word, remainingWordsBefore, {
       returnObject: true,
-      showMatches: true
+      showMatches: true,
     })
 
     // Determine the actual answer (from input or if list is down to 1)
@@ -203,33 +206,33 @@ function DisplayStatus({
     // Calculate the optimal guess for this state
     let bestGuessData: BestGuessData | null = null
     const maxWordListForOptimal = 2000
-    
+
     if (remainingWordsBefore.length <= maxWordListForOptimal) {
       try {
         // Use tRPC to get the best guess from the backend
         const result = await trpcUtils.getBestGuess.fetch({
-          history: previousGuesses.map(g => ({
+          history: previousGuesses.map((g) => ({
             guess: g.word,
-            evaluation: g.key
+            evaluation: g.key,
           })),
           guessNumber: index + 1,
         })
 
         if (result && result.bestGuess && !result.error) {
           const bestGuess = result.bestGuess
-          
+
           // Calculate bins for the best guess
           const bestBinsData = getBins(bestGuess, remainingWordsBefore, {
             returnObject: true,
-            showMatches: true
+            showMatches: true,
           })
-          
+
           // Calculate evaluation if we know the answer
           let bestEvaluation: string | null = null
           if (knownAnswer) {
             bestEvaluation = evaluateToString(bestGuess, knownAnswer)
           }
-          
+
           bestGuessData = {
             word: bestGuess,
             evaluation: bestEvaluation,
@@ -237,9 +240,11 @@ function DisplayStatus({
             info: {
               reason: result.reason || 'Optimal guess from backend',
               binsCount: result.bins,
-              avgBinSize: result.bins ? parseFloat((result.remainingCount / result.bins).toFixed(2)) : null,
-              distributionScore: null
-            }
+              avgBinSize: result.bins
+                ? parseFloat((result.remainingCount / result.bins).toFixed(2))
+                : null,
+              distributionScore: null,
+            },
           }
         }
       } catch (error) {
@@ -254,7 +259,7 @@ function DisplayStatus({
       remainingWordsBefore: remainingWordsBefore.length,
       remainingWordsAfter: remainingWordsAfter.length,
       index,
-      bestGuess: bestGuessData
+      bestGuess: bestGuessData,
     })
     setShowBinModal(true)
   }
@@ -264,14 +269,14 @@ function DisplayStatus({
       <Container className="mt-4 mb-4">
         {currentGuesses.length > 0 && (
           <>
-            <h5 className="mb-3">Guess History</h5>
             <div className="d-flex flex-column gap-3 mb-4">
               {currentGuesses.map((guess, index) => {
                 const guessesUpTo = currentGuesses.slice(0, index + 1)
                 const remainingAfter = applyGuesses(startingList, guessesUpTo)
-                const remainingBefore = index === 0 
-                  ? startingList.length 
-                  : applyGuesses(startingList, currentGuesses.slice(0, index)).length
+                const remainingBefore =
+                  index === 0
+                    ? startingList.length
+                    : applyGuesses(startingList, currentGuesses.slice(0, index)).length
 
                 return (
                   <div
@@ -320,8 +325,8 @@ function DisplayStatus({
                         </div>
                       </div>
                       <div className="mt-2 d-flex gap-2 align-items-center">
-                        <small 
-                          className="text-primary" 
+                        <small
+                          className="text-primary"
                           style={{ cursor: 'pointer' }}
                           onClick={() => handleGuessCardClick(guess, index)}
                         >
@@ -374,9 +379,9 @@ function DisplayStatus({
           <>
             <hr style={{ color: 'white' }} />
             <div className="text-center mb-3">
-              <Button 
-                variant="primary" 
-                size="sm" 
+              <Button
+                variant="primary"
+                size="sm"
                 className="me-2"
                 onClick={() => dispatch(setGuesses([]))}
               >
@@ -388,11 +393,7 @@ function DisplayStatus({
                 {currentFilteredList.length === 1 ? '' : 's'} left{' '}
                 {clickedGuess && `after guessing ${clickedGuess}`}
               </p>
-              <Button 
-                variant="dark" 
-                size="sm"
-                onClick={() => setCountOnly(!countOnly)}
-              >
+              <Button variant="dark" size="sm" onClick={() => setCountOnly(!countOnly)}>
                 {countOnly ? 'Show Suggestions' : 'Show Word Count Only'}
               </Button>
             </div>
@@ -446,7 +447,11 @@ function DisplayStatus({
                                   <tr key={`ordered-${i}`}>
                                     <td>{word.word}</td>
                                     <td>
-                                      {((100 * (word.score || 0)) / currentFilteredList.length).toFixed(1)}%
+                                      {(
+                                        (100 * (word.score || 0)) /
+                                        currentFilteredList.length
+                                      ).toFixed(1)}
+                                      %
                                     </td>
                                   </tr>
                                 ))}
@@ -467,11 +472,7 @@ function DisplayStatus({
         {currentGuesses.length > 0 && !countOnly && (
           <div className="text-center mb-3">
             {showDepth ? (
-              <Button 
-                variant="dark" 
-                size="sm"
-                onClick={() => setShowDepth(false)}
-              >
+              <Button variant="dark" size="sm" onClick={() => setShowDepth(false)}>
                 Hide Analysis
               </Button>
             ) : (
@@ -480,7 +481,8 @@ function DisplayStatus({
                 size="sm"
                 onClick={() => {
                   setShowDepth(true)
-                  const wordToAnalyze = clickedGuess || currentGuesses[currentGuesses.length - 1].word
+                  const wordToAnalyze =
+                    clickedGuess || currentGuesses[currentGuesses.length - 1].word
                   createBinsForGuess(wordToAnalyze)
                 }}
               >

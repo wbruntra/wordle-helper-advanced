@@ -5,7 +5,13 @@ import { AiOutlineBarChart } from 'react-icons/ai'
 import { FaRobot } from 'react-icons/fa6'
 import { useSelector, useDispatch } from 'react-redux'
 import { setModalState } from './redux/uiSlice'
-import { addGuess, updateGuess, setGuesses, setTodaysWord, setTodaysWordDate } from './redux/gameSlice'
+import {
+  addGuess,
+  updateGuess,
+  setGuesses,
+  setTodaysWord,
+  setTodaysWordDate,
+} from './redux/gameSlice'
 import { useNavigate } from 'react-router-dom'
 import { Container, Card, Form, Button, Alert, Row, Col } from 'react-bootstrap'
 import { trpc } from './trpc'
@@ -19,6 +25,7 @@ import WordListModal from './WordListModal'
 import GameAnalysisModal from './GameAnalysisModal'
 import _ from 'lodash'
 import UploadScreenShotModal from './UploadScreenShotModal'
+import InteractiveGuessInput from './InteractiveGuessInput'
 
 const wordLists = {
   // nytSolutions,
@@ -38,6 +45,15 @@ function Wordle() {
   const [editingGuessIndex, setEditingGuessIndex] = useState(null)
   const [editWord, setEditWord] = useState('')
   const [editKey, setEditKey] = useState('')
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const dispatch = useDispatch()
   const navigate = useNavigate()
@@ -52,7 +68,11 @@ function Wordle() {
 
   // Update todaysWord in Redux when query data changes
   useEffect(() => {
-    if (recentAnswersQuery.data && recentAnswersQuery.data.answers && recentAnswersQuery.data.answers.length > 0) {
+    if (
+      recentAnswersQuery.data &&
+      recentAnswersQuery.data.answers &&
+      recentAnswersQuery.data.answers.length > 0
+    ) {
       const latestAnswer = recentAnswersQuery.data.answers[0]
       dispatch(setTodaysWord(latestAnswer.word))
       dispatch(setTodaysWordDate(latestAnswer.date))
@@ -123,7 +143,12 @@ function Wordle() {
             <h3 className="mb-1">Wordle Helper</h3>
             {useTodaysWord && todaysWordDate && (
               <small className="text-muted">
-                Using Wordle from {new Date(todaysWordDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                Using Wordle from{' '}
+                {new Date(todaysWordDate + 'T00:00:00').toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
               </small>
             )}
           </div>
@@ -165,9 +190,9 @@ function Wordle() {
           <Col lg={6}>
             <Card>
               <Card.Body>
-                <Card.Title>
+                {/* <Card.Title>
                   {editingGuessIndex === null ? 'Add New Guess' : 'Edit Guess'}
-                </Card.Title>
+                </Card.Title> */}
 
                 {editingGuessIndex === null && (
                   <Form onSubmit={handleAddGuess}>
@@ -189,25 +214,32 @@ function Wordle() {
                             setKey(newKey)
                           }
                         }}
-                        placeholder="GUESS"
+                        placeholder="YOUR GUESS"
                         maxLength="5"
                         ref={inputEl}
                       />
                     </Form.Group>
 
-                    <Form.Group className="mb-3">
-                      {/* <Form.Label>Response</Form.Label> */}
-                      <Form.Control
-                        className="font-mono text-uppercase"
-                        value={key}
-                        onChange={(e) => setKey(e.target.value.toUpperCase())}
-                        placeholder="response"
-                        maxLength="5"
-                      />
-                      <Form.Text className="text-muted">
-                        Y = yellow, G = green, other = miss
-                      </Form.Text>
-                    </Form.Group>
+                    {isMobile ? (
+                      <>
+                        <InteractiveGuessInput word={word} currentKey={key} onKeyChange={setKey} />
+                        <Form.Text className="text-muted">Tap boxes to change colors</Form.Text>
+                      </>
+                    ) : (
+                      <Form.Group className="mb-3">
+                        {/* <Form.Label>Response</Form.Label> */}
+                        <Form.Control
+                          className="font-mono text-uppercase"
+                          value={key}
+                          onChange={(e) => setKey(e.target.value.toUpperCase())}
+                          placeholder="response"
+                          maxLength="5"
+                        />
+                        <Form.Text className="text-muted">
+                          Y = yellow, G = green, other = miss
+                        </Form.Text>
+                      </Form.Group>
+                    )}
 
                     {error !== '' && <Alert variant="danger">{error}</Alert>}
 
@@ -240,16 +272,27 @@ function Wordle() {
                       />
                     </Form.Group>
 
-                    <Form.Group className="mb-3">
-                      <Form.Label>Response</Form.Label>
-                      <Form.Control
-                        className="font-mono text-uppercase"
-                        value={editKey}
-                        onChange={(e) => setEditKey(e.target.value.toUpperCase())}
-                        placeholder="response"
-                        maxLength="5"
-                      />
-                    </Form.Group>
+                    {isMobile ? (
+                      <>
+                        <InteractiveGuessInput
+                          word={editWord}
+                          currentKey={editKey}
+                          onKeyChange={setEditKey}
+                        />
+                        <Form.Text className="text-muted">Tap boxes to change colors</Form.Text>
+                      </>
+                    ) : (
+                      <Form.Group className="mb-3">
+                        <Form.Label>Response</Form.Label>
+                        <Form.Control
+                          className="font-mono text-uppercase"
+                          value={editKey}
+                          onChange={(e) => setEditKey(e.target.value.toUpperCase())}
+                          placeholder="response"
+                          maxLength="5"
+                        />
+                      </Form.Group>
+                    )}
 
                     {error !== '' && <Alert variant="danger">{error}</Alert>}
 
