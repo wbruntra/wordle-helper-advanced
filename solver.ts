@@ -107,12 +107,19 @@ const preComputeSecondGuess = ({ initialGuess, likelyWords }: PreComputeOptions)
 
     // First pass: find the maximum number of bins
     // Early interrupt: if we find a word that perfectly separates all answers, use it
+    // IMPORTANT: Always evaluate remaining (filtered) answers first so that a viable answer
+    // from the narrowed set is preferred over an arbitrary dictionary word.
     const perfectSeparation = filteredAnswers.length
     let maxBins = 0
     const wordBinCounts: Array<{ word: string; bins: number; binSizes: number[] }> = []
     let foundPerfectSeparation = false
 
-    for (const potentialGuess of likelyWords) {
+    const candidateOrder = [
+      ...filteredAnswers,
+      ...likelyWords.filter((w) => !filteredAnswers.includes(w)),
+    ]
+
+    for (const potentialGuess of candidateOrder) {
       const bins = getBins(potentialGuess, filteredAnswers, { returnObject: false }) as number[]
       const numBins = bins.length
 
@@ -231,7 +238,7 @@ const findBestGuessSinglePass = (
     const numBins = bins.length
     const variance = calculateVariance(bins)
 
-    // Check for perfect separation: each remaining word gets its own bin
+    // Check for perfect separation: each remaining word has its own bin
     if (numBins === remainingWords.length) {
       return {
         word: candidate,
@@ -239,7 +246,7 @@ const findBestGuessSinglePass = (
         binSizes: bins,
         variance: variance,
         distribution: variance,
-        reason: `PERFECT SEPARATION: Each of ${numBins} remaining words gets its own bin`,
+        reason: `PERFECT SEPARATION: Each of ${numBins} remaining words has its own bin`,
       }
     }
 
@@ -358,11 +365,13 @@ const getOptimalGuess = async (
       }
 
       const bestGuess = keyData.bestGuesses[0]
+      const isPerfectSeparation =
+        bestGuess.distribution === 0 && bestGuess.bins === keyData.filteredAnswersCount
       const result: OptimalGuessResult = {
         recommendation: bestGuess.word,
-        reason: `Maximizes bins (${
-          bestGuess.bins
-        }) with lowest distribution variance (${bestGuess.distribution.toFixed(2)})`,
+        reason: isPerfectSeparation
+          ? `PERFECT SEPARATION: Each of ${bestGuess.bins} remaining words has its own bin`
+          : `Maximizes bins (${bestGuess.bins}) with lowest distribution variance (${bestGuess.distribution.toFixed(2)})`,
         remainingAnswers: keyData.filteredAnswersCount,
         cached: true,
         bins: bestGuess.bins,
@@ -437,11 +446,13 @@ const getOptimalGuess = async (
   }
 
   const bestGuess = keyData.bestGuesses[0]
+  const isPerfectSeparation =
+    bestGuess.distribution === 0 && bestGuess.bins === keyData.filteredAnswersCount
   const result: OptimalGuessResult = {
     recommendation: bestGuess.word,
-    reason: `Maximizes bins (${
-      bestGuess.bins
-    }) with lowest distribution variance (${bestGuess.distribution.toFixed(2)})`,
+    reason: isPerfectSeparation
+      ? `PERFECT SEPARATION: Each of ${bestGuess.bins} remaining words has its own bin`
+      : `Maximizes bins (${bestGuess.bins}) with lowest distribution variance (${bestGuess.distribution.toFixed(2)})`,
     remainingAnswers: keyData.filteredAnswersCount,
     cached: false, // This came from on-demand calculation
     bins: bestGuess.bins,
@@ -1057,7 +1068,7 @@ const runLegacyCLI = async (args: string[]): Promise<void> => {
 
 This script generates or manages solver caches for optimal Wordle gameplay.
 
-Usage: node solver.mjs <command> [options]
+Usage: bun solver.ts <command> [options]
 
 Commands:
   build <initial_guess>        Build cache incrementally - only compute missing patterns

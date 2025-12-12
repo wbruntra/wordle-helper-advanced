@@ -1,4 +1,4 @@
-const { decompress, compress } = require('@advancedUtils')
+const { decompress, compress } = require('@/client/src/advancedUtils')
 const likelyWords = require('./likely-word-list.json')
 const fs = require('fs')
 

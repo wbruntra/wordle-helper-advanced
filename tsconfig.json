@@ -27,13 +27,13 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "typeRoots": ["./node_modules/@types", "./src/types"],
-    "baseUrl": "./",
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["*"],
-      "@config": ["config.js"],
-      "@secrets": ["secrets.js"],
-      "@db_connection": ["db_connect.js"],
-      "@advancedUtils": ["client/src/advancedUtils.ts"]
+      "@/*": ["./*"],
+      "@config": ["./config.js"],
+      "@secrets": ["./secrets.js"],
+      "@db_connection": ["./db_connect.js"],
+      "@advancedUtils": ["./client/src/advancedUtils.ts"]
     }
   },
   "include": ["app.ts", "bin/**/*", "src/**/*", "utils/**/*", "*.ts", "client/src/advancedUtils.ts"],
