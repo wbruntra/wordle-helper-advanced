@@ -11,7 +11,8 @@
     "dev": "bun --watch app.ts",
     "test": "bun test utils.test.js auto-play-wordle.test.js parseAnswers.test.ts",
     "test:watch": "bun test --watch utils.test.js auto-play-wordle.test.js parseAnswers.test.ts",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "client": "cd client && bun run dev"
   },
   "keywords": [],
   "author": "",
