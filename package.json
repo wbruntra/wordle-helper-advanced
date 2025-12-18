@@ -4,14 +4,7 @@
   "main": "index.js",
   "scripts": {
     "api": "bun --watch ./bin/www",
-    "api:ts": "ts-node-dev --respawn --transpile-only ./bin/www",
-    "build": "tsc",
-    "build:watch": "tsc --watch",
     "start": "node ./dist/bin/www",
-    "dev": "bun --watch app.ts",
-    "test": "bun test utils.test.js auto-play-wordle.test.js parseAnswers.test.ts",
-    "test:watch": "bun test --watch utils.test.js auto-play-wordle.test.js parseAnswers.test.ts",
-    "type-check": "tsc --noEmit",
     "client": "cd client && bun run dev"
   },
   "keywords": [],
