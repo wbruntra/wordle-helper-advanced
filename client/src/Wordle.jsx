@@ -12,17 +12,17 @@ import {
   setRecentAnswers,
 } from './redux/gameSlice'
 import { useNavigate } from 'react-router-dom'
-import { Container, Card, Form, Button, Alert, Row, Col, Modal } from 'react-bootstrap'
+import { Container, Card, Form, Button, Alert, Row, Col } from 'react-bootstrap'
 import { trpc } from './trpc'
 
 import { applyGuesses, evaluateToString } from './advancedUtils'
-import { orderEntireWordList } from './utils'
 // import { commonPlusOfficial, nytAll, nytSolutions } from './wordlists/index'
 import likelyWordList from './wordlists/likely-word-list.json'
 
 import DisplayStatus from './DisplayStatus'
 import WordListModal from './WordListModal'
 import GameAnalysisModal from './GameAnalysisModal'
+import RemainingWordsModal from './RemainingWordsModal'
 import UploadScreenShotModal from './UploadScreenShotModal'
 import InteractiveGuessInput from './InteractiveGuessInput'
 
@@ -75,7 +75,6 @@ function Wordle() {
   const [editKey, setEditKey] = useState('')
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [showRemainingModal, setShowRemainingModal] = useState(false)
-  const [scoredRemainingWords, setScoredRemainingWords] = useState([])
 
   useEffect(() => {
     const handleResize = () => {
@@ -103,24 +102,6 @@ function Wordle() {
     () => getSolvePhase(remainingWords.length),
     [remainingWords.length],
   )
-
-  useEffect(() => {
-    if (!showRemainingModal) return
-    if (remainingWords.length === 0 || remainingWords.length >= 1500) {
-      setScoredRemainingWords(remainingWords.map((w) => ({ word: w })))
-      return
-    }
-    setTimeout(() => {
-      const scored = orderEntireWordList(remainingWords, {
-        only_filtered: true,
-        startingList: startingWordList,
-      })
-      // orderEntireWordList returns [] when no filtering has happened yet
-      setScoredRemainingWords(
-        scored.length > 0 ? scored : remainingWords.map((w) => ({ word: w })),
-      )
-    }, 0)
-  }, [showRemainingModal, remainingWords, startingWordList])
 
   // Fetch recent answers from the backend
   const recentAnswersQuery = trpc.getRecentAnswers.useQuery({ limit: 3 })
@@ -179,6 +160,22 @@ function Wordle() {
     setError('')
   }
 
+  const hideRemainingModal = useCallback(() => {
+    setShowRemainingModal(false)
+  }, [])
+
+  const remainingWordSolveChance = useMemo(() => {
+    if (remainingWords.length <= 0 || remainingWords.length >= startingWordList.length) {
+      return null
+    }
+
+    if (remainingWords.length === 1) {
+      return '100% — you have it!'
+    }
+
+    return `${(100 / remainingWords.length).toFixed(1)}% chance next guess wins`
+  }, [remainingWords.length, startingWordList.length])
+
   return (
     <div className="wordle-page">
       <Container className="mt-3 wordle-home-shell">
@@ -199,6 +196,16 @@ function Wordle() {
           </div>
 
           <div className="wordle-toolbar flex-shrink-0">
+              {guesses.length > 0 && (
+                <Button
+                  variant="outline-light"
+                  size="sm"
+                  className="wordle-toolbar-clear"
+                  onClick={() => dispatch(setGuesses([]))}
+                >
+                  Clear all
+                </Button>
+              )}
               <span
                 className="selectable wordle-toolbar-button"
                 onClick={() => navigate('/auto-play')}
@@ -254,12 +261,8 @@ function Wordle() {
                     ? `${startingWordList.length.toLocaleString()} total`
                     : `${guesses.length} guess${guesses.length === 1 ? '' : 'es'} · from ${startingWordList.length.toLocaleString()}`}
                 </div>
-                {remainingWords.length > 0 && remainingWords.length < startingWordList.length && (
-                  <div className="wordle-hero-solve-pct">
-                    {remainingWords.length === 1
-                      ? '100% — you have it!'
-                      : `${(100 / remainingWords.length).toFixed(1)}% chance next guess wins`}
-                  </div>
+                {remainingWordSolveChance && (
+                  <div className="wordle-hero-solve-pct">{remainingWordSolveChance}</div>
                 )}
               </Card.Body>
             </Card>
@@ -279,15 +282,10 @@ function Wordle() {
                         className="font-mono text-uppercase wordle-guess-input"
                         value={word}
                         onChange={(e) => {
-                          setWord(e.target.value.toUpperCase())
-                          if (
-                            e.target.value.toUpperCase().length === 5 &&
-                            answerInput.length === 5
-                          ) {
-                            const newKey = evaluateToString(
-                              e.target.value.toUpperCase(),
-                              answerInput,
-                            )
+                          const upperWord = e.target.value.toUpperCase()
+                          setWord(upperWord)
+                          if (upperWord.length === 5 && answerInput.length === 5) {
+                            const newKey = evaluateToString(upperWord, answerInput)
                             setKey(newKey)
                           }
                         }}
@@ -300,9 +298,6 @@ function Wordle() {
                     {isMobile ? (
                       <div className="wordle-feedback-panel">
                         <InteractiveGuessInput word={word} currentKey={key} onKeyChange={setKey} />
-                        <Form.Text className="wordle-helper-text">
-                          Tap tiles to set feedback.
-                        </Form.Text>
                       </div>
                     ) : (
                       <Form.Group className="mb-3 wordle-guess-field">
@@ -357,9 +352,6 @@ function Wordle() {
                           currentKey={editKey}
                           onKeyChange={setEditKey}
                         />
-                        <Form.Text className="wordle-helper-text">
-                          Tap tiles to set feedback.
-                        </Form.Text>
                       </div>
                     ) : (
                       <Form.Group className="mb-3 wordle-guess-field">
@@ -436,46 +428,12 @@ function Wordle() {
         answer={answerInput}
       />
 
-      <Modal show={showRemainingModal} onHide={() => setShowRemainingModal(false)} size="sm" scrollable>
-        <Modal.Header closeButton>
-          <Modal.Title>
-            {remainingWords.length.toLocaleString()} remaining word{remainingWords.length === 1 ? '' : 's'}
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {remainingWords.length > 0 && remainingWords.length < startingWordList.length && (
-            <p className="wordle-modal-solve-pct mb-3">
-              {remainingWords.length === 1
-                ? '100% — you have it!'
-                : `${(100 / remainingWords.length).toFixed(1)}% chance next guess wins`}
-            </p>
-          )}
-          {scoredRemainingWords.length > 0 && scoredRemainingWords[0].score != null ? (
-            <table className="remaining-words-table">
-              <thead>
-                <tr>
-                  <th>Word</th>
-                  <th>Solve chance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {scoredRemainingWords.map(({ word, score }) => (
-                  <tr key={word}>
-                    <td><code>{word}</code></td>
-                    <td>{((100 * score) / remainingWords.length).toFixed(1)}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <div className="remaining-words-grid">
-              {remainingWords.map((w) => (
-                <code key={w} className="remaining-word-chip">{w}</code>
-              ))}
-            </div>
-          )}
-        </Modal.Body>
-      </Modal>
+      <RemainingWordsModal
+        show={showRemainingModal}
+        onHide={hideRemainingModal}
+        remainingWords={remainingWords}
+        startingList={startingWordList}
+      />
     </div>
   )
 }

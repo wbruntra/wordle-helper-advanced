@@ -10,8 +10,8 @@ import _ from 'lodash'
 import { BsPencil } from 'react-icons/bs'
 import { TiTimes } from 'react-icons/ti'
 import { useSelector, useDispatch } from 'react-redux'
-import { removeGuess, setGuesses } from './redux/gameSlice'
-import { Badge, Button, Container, Spinner } from 'react-bootstrap'
+import { removeGuess } from './redux/gameSlice'
+import { Badge, Button, Container } from 'react-bootstrap'
 
 import BinsTable from './BinsTable'
 import BinDetailsModal from './BinDetailsModal'
@@ -89,16 +89,12 @@ function DisplayStatus({ startingList, onGuessClick, answer }: DisplayStatusProp
   const dispatch = useDispatch()
   const currentGuesses = useSelector((state: RootState) => state.game.guesses)
   const [showDepth, setShowDepth] = useState(false)
-  const [usingOnlyFiltered, setUsingOnlyFiltered] = useState(true)
-  const [showSuggestions, setShowSuggestions] = useState(false)
   const [currentFilteredList, setFiltered] = useState<string[]>(startingList.slice())
   const [error, setError] = useState('')
   const [bins, setBins] = useState<BinObject[]>([])
   const [binsWord, setBinsWord] = useState('')
-  const [orderedWords, setOrderedWords] = useState<WordScore[]>([])
   const [showBinModal, setShowBinModal] = useState(false)
   const [modalGuessData, setModalGuessData] = useState<ModalGuessData | null>(null)
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
 
   const trpcUtils = trpc.useUtils()
   const remainingCount = currentFilteredList.length
@@ -125,25 +121,7 @@ function DisplayStatus({ startingList, onGuessClick, answer }: DisplayStatusProp
     } else {
       setError('')
     }
-
-    if (showSuggestions && localFiltered.length < 1500) {
-      setIsLoadingSuggestions(true)
-      setTimeout(() => {
-        const newWordOrder = orderEntireWordList(localFiltered, {
-          only_filtered: usingOnlyFiltered,
-          startingList,
-        })
-        setOrderedWords(newWordOrder)
-        setIsLoadingSuggestions(false)
-      }, 0)
-    } else if (showSuggestions) {
-      setOrderedWords(localFiltered.map((w) => ({ word: w })))
-      setIsLoadingSuggestions(false)
-    } else {
-      setOrderedWords([])
-      setIsLoadingSuggestions(false)
-    }
-  }, [currentGuesses, usingOnlyFiltered, startingList, showSuggestions])
+  }, [currentGuesses, startingList])
 
   useEffect(() => {
     if (currentGuesses.length > 0 && showDepth) {
@@ -331,22 +309,6 @@ function DisplayStatus({ startingList, onGuessClick, answer }: DisplayStatusProp
                   <p className="solver-panel-eyebrow mb-1">Next step</p>
                   <h4 className="mb-1">{solveStage.title}</h4>
                 </div>
-                <div className="solver-toolbar">
-                  <Button
-                    variant={showSuggestions ? 'primary' : 'outline-light'}
-                    size="sm"
-                    onClick={() => setShowSuggestions((prev) => !prev)}
-                  >
-                    {showSuggestions ? 'Hide suggestions' : 'Show suggestions'}
-                  </Button>
-                  <Button
-                    variant="outline-light"
-                    size="sm"
-                    onClick={() => dispatch(setGuesses([]))}
-                  >
-                    Clear guesses
-                  </Button>
-                </div>
               </div>
 
               {latestGuess && (
@@ -366,49 +328,6 @@ function DisplayStatus({ startingList, onGuessClick, answer }: DisplayStatusProp
                 </div>
               )}
             </section>
-
-            {showSuggestions && (
-              <section className="solver-panel">
-                <div className="solver-panel-header">
-                  <div>
-                    <p className="solver-panel-eyebrow mb-1">Recommendations</p>
-                    <h5 className="mb-1">Suggested next guesses</h5>
-                  </div>
-                  <Button
-                    variant="outline-light"
-                    size="sm"
-                    onClick={() => setUsingOnlyFiltered((prev) => !prev)}
-                  >
-                    {usingOnlyFiltered ? 'Use full word list' : 'Use remaining answers only'}
-                  </Button>
-                </div>
-
-                {isLoadingSuggestions ? (
-                  <div className="solver-loading-state text-center py-4">
-                    <Spinner animation="border" role="status" className="me-2" />
-                    <span>Calculating suggestions...</span>
-                  </div>
-                ) : currentFilteredList.length >= 1500 ? (
-                  <div className="solver-soft-card">
-                    <strong>Still very broad.</strong> Suggestions get sharper after one more filtering guess.
-                  </div>
-                ) : (
-                  <div className="solver-suggestion-grid">
-                    {orderedWords.slice(0, 6).map((word, i) => (
-                      <div key={`ordered-${i}`} className="solver-suggestion-card">
-                        <span className="solver-suggestion-rank">#{i + 1}</span>
-                        <code>{word.word}</code>
-                        <span className="solver-suggestion-score">
-                          {currentFilteredList.length > 0 && word.score
-                            ? `${((100 * word.score) / currentFilteredList.length).toFixed(1)}% solve now`
-                            : 'Strong separator'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-            )}
 
             <section className="solver-panel">
               <div className="solver-panel-header">

@@ -145,6 +145,22 @@ $dark-gray: #282c34;
   justify-content: flex-end;
 }
 
+.wordle-toolbar-clear {
+  min-height: 40px;
+  padding: 0.45rem 0.8rem;
+  border-radius: 11px;
+  color: rgba(255, 255, 255, 0.84);
+  border-color: rgba(255, 255, 255, 0.14);
+  white-space: nowrap;
+
+  &:hover,
+  &:focus {
+    color: white;
+    border-color: rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.06);
+  }
+}
+
 .wordle-toolbar-button {
   display: inline-flex;
   align-items: center;
@@ -553,6 +569,12 @@ $dark-gray: #282c34;
 
   .wordle-toolbar {
     justify-content: flex-start;
+  }
+
+  .wordle-toolbar-clear {
+    min-height: 36px;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.78rem;
   }
 
   .solver-panel,
