@@ -143,7 +143,6 @@ function Wordle() {
             <h3 className="mb-1">Wordle Helper</h3>
             {useTodaysWord && todaysWordDate && (
               <small className="text-muted">
-                Using Wordle from{' '}
                 {new Date(todaysWordDate + 'T00:00:00').toLocaleDateString('en-US', {
                   month: 'long',
                   day: 'numeric',
