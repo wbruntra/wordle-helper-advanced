@@ -1,76 +1,118 @@
+import { useState, useEffect } from 'react'
 import Button from 'react-bootstrap/Button'
 import Modal from 'react-bootstrap/Modal'
 import Form from 'react-bootstrap/Form'
 import Spinner from 'react-bootstrap/Spinner'
 import { useSelector, useDispatch } from 'react-redux'
-import { setUseTodaysWord } from './redux/gameSlice'
+import { setShowWord, setSelectedDateIndex } from './redux/gameSlice'
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00')
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const diff = Math.round((today - d) / (1000 * 60 * 60 * 24))
+  const labels = { 0: 'Today', 1: 'Yesterday', 2: 'Day before yesterday' }
+  const label = labels[diff] || d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+  return label
+}
 
 function WordListModal({ show, handleClose, answerInput, setAnswerInput, todaysWordLoading }) {
   const dispatch = useDispatch()
-  const useTodaysWord = useSelector((state) => state.game.useTodaysWord)
-  const todaysWord = useSelector((state) => state.game.todaysWord)
+  const showWord = useSelector((state) => state.game.showWord)
+  const selectedDateIndex = useSelector((state) => state.game.selectedDateIndex)
+  const recentAnswers = useSelector((state) => state.game.recentAnswers)
+
+  const [customInput, setCustomInput] = useState('')
+
+  useEffect(() => {
+    if (show) {
+      setCustomInput('')
+    }
+  }, [show])
+
+  const selectedAnswer = recentAnswers[selectedDateIndex]
+
+  const applyAndClose = () => {
+    const trimmedCustom = customInput.toUpperCase().trim()
+    if (trimmedCustom.length === 5) {
+      setAnswerInput(trimmedCustom)
+    } else if (trimmedCustom.length > 0) {
+      setAnswerInput('')
+    } else if (selectedAnswer) {
+      setAnswerInput(selectedAnswer.word)
+    } else {
+      setAnswerInput('')
+    }
+    handleClose()
+  }
+
+  const effectiveAnswer = selectedAnswer ? selectedAnswer.word : ''
 
   return (
-    <Modal show={show} onHide={handleClose}>
+    <Modal show={show} onHide={applyAndClose}>
       <Modal.Header closeButton>
         <Modal.Title>Settings</Modal.Title>
       </Modal.Header>
 
       <Modal.Body>
-        <Form.Group className="mb-4">
+        {todaysWordLoading ? (
+          <div className="d-flex align-items-center gap-2 mb-3">
+            <Spinner animation="border" size="sm" />
+            Loading answers...
+          </div>
+        ) : recentAnswers.length > 0 ? (
+          <Form.Group className="mb-3">
+            <Form.Label>Answer Date</Form.Label>
+            <Form.Select
+              value={selectedDateIndex}
+              onChange={(e) => dispatch(setSelectedDateIndex(Number(e.target.value)))}
+            >
+              {recentAnswers.map((answer, idx) => (
+                <option key={answer.date} value={idx}>
+                  {formatDate(answer.date)}
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+        ) : (
+          <div className="text-warning mb-3">No historical answers available</div>
+        )}
+
+        <Form.Group className="mb-3">
           <Form.Check
             type="switch"
-            id="use-todays-word-switch"
-            label="Use today's Wordle answer"
-            checked={useTodaysWord}
-            onChange={(e) => {
-              dispatch(setUseTodaysWord(e.target.checked))
-              if (e.target.checked && todaysWord) {
-                setAnswerInput(todaysWord)
-              } else if (!e.target.checked) {
-                setAnswerInput('')
-              }
-            }}
+            id="show-word-switch"
+            label="Show word"
+            checked={showWord}
+            onChange={(e) => dispatch(setShowWord(e.target.checked))}
           />
-          <Form.Text className="text-muted">
-            {todaysWordLoading ? (
-              <span className="d-flex align-items-center gap-2 mt-1">
-                <Spinner animation="border" size="sm" />
-                Loading today's word...
-              </span>
-            ) : todaysWord ? (
-              <span className="mt-1">
-                Today's word: <strong className="font-monospace">{todaysWord}</strong>
-              </span>
-            ) : (
-              <span className="mt-1 text-warning">Today's word not available</span>
-            )}
-          </Form.Text>
+          {showWord && selectedAnswer && (
+            <Form.Text className="text-muted mt-1">
+              Word: <strong className="font-monospace">{effectiveAnswer}</strong>
+            </Form.Text>
+          )}
         </Form.Group>
 
         <hr />
 
-        <p className="mt-3">
-          {useTodaysWord
-            ? "Today's word is being used. Turn off the switch above to enter a custom answer."
-            : 'Enter a custom answer to analyze your guesses:'}
-        </p>
-        <Form.Control
-          type="text"
-          value={answerInput}
-          onChange={(e) => {
-            setAnswerInput(e.target.value.toLocaleUpperCase())
-          }}
-          disabled={useTodaysWord}
-          placeholder={useTodaysWord ? '' : 'Enter custom answer'}
-          maxLength={5}
-          className="text-uppercase font-monospace"
-        />
+        <Form.Group className="mt-3">
+          <Form.Label>
+            Custom Answer <small className="text-muted">(overrides date selection)</small>
+          </Form.Label>
+          <Form.Control
+            type="text"
+            value={customInput}
+            onChange={(e) => setCustomInput(e.target.value.toLocaleUpperCase())}
+            placeholder="Enter custom answer"
+            maxLength={5}
+            className="text-uppercase font-monospace"
+          />
+        </Form.Group>
       </Modal.Body>
 
       <Modal.Footer>
-        <Button onClick={handleClose} variant="secondary">
-          Close
+        <Button onClick={applyAndClose} variant="primary">
+          Apply
         </Button>
       </Modal.Footer>
     </Modal>

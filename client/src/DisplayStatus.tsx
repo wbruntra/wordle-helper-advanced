@@ -19,7 +19,6 @@ import { trpc } from './trpc'
 import type { RootState } from './redux/store'
 
 interface DisplayStatusProps {
-  guesses: any[]
   startingList: string[]
   onGuessClick: (index: number) => void
   answer?: string
@@ -56,38 +55,58 @@ interface ModalGuessData {
 
 type BinObject = Record<string, { [key: string]: string[] | number }>
 
-function DisplayStatus({ guesses, startingList, onGuessClick, answer }: DisplayStatusProps) {
+function getSolveStage(remainingCount: number) {
+  if (remainingCount <= 1) {
+    return {
+      title: 'Solved',
+    }
+  }
+
+  if (remainingCount <= 10) {
+    return {
+      title: 'Endgame',
+    }
+  }
+
+  if (remainingCount <= 75) {
+    return {
+      title: 'Narrowing',
+    }
+  }
+
+  if (remainingCount <= 300) {
+    return {
+      title: 'Midgame',
+    }
+  }
+
+  return {
+    title: 'Wide open',
+  }
+}
+
+function DisplayStatus({ startingList, onGuessClick, answer }: DisplayStatusProps) {
   const dispatch = useDispatch()
   const currentGuesses = useSelector((state: RootState) => state.game.guesses)
   const [showDepth, setShowDepth] = useState(false)
   const [usingOnlyFiltered, setUsingOnlyFiltered] = useState(true)
-  const [countOnly, setCountOnly] = useState(true)
+  const [showSuggestions, setShowSuggestions] = useState(false)
   const [currentFilteredList, setFiltered] = useState<string[]>(startingList.slice())
   const [error, setError] = useState('')
   const [bins, setBins] = useState<BinObject[]>([])
   const [binsWord, setBinsWord] = useState('')
   const [orderedWords, setOrderedWords] = useState<WordScore[]>([])
-  const [clickedGuess, setClickedGuess] = useState<string | null>(null)
   const [showBinModal, setShowBinModal] = useState(false)
   const [modalGuessData, setModalGuessData] = useState<ModalGuessData | null>(null)
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
 
   const trpcUtils = trpc.useUtils()
+  const remainingCount = currentFilteredList.length
+  const solveStage = getSolveStage(remainingCount)
+  const latestGuess = currentGuesses[currentGuesses.length - 1] ?? null
 
   useEffect(() => {
-    let appliedGuesses: any[] = []
-    if (clickedGuess) {
-      for (let i = 0; i < currentGuesses.length; i++) {
-        appliedGuesses.push(currentGuesses[i])
-        if (currentGuesses[i].word === clickedGuess) {
-          break
-        }
-      }
-    } else {
-      appliedGuesses = currentGuesses
-    }
-
-    let localFiltered = applyGuesses(startingList, appliedGuesses)
+    const localFiltered = applyGuesses(startingList, currentGuesses)
     setFiltered(localFiltered)
 
     if (localFiltered.length === 0) {
@@ -96,9 +115,8 @@ function DisplayStatus({ guesses, startingList, onGuessClick, answer }: DisplayS
       setError('')
     }
 
-    if (!countOnly && localFiltered.length < 1500) {
+    if (showSuggestions && localFiltered.length < 1500) {
       setIsLoadingSuggestions(true)
-      // Use setTimeout to allow React to render the loading state first
       setTimeout(() => {
         const newWordOrder = orderEntireWordList(localFiltered, {
           only_filtered: usingOnlyFiltered,
@@ -107,16 +125,18 @@ function DisplayStatus({ guesses, startingList, onGuessClick, answer }: DisplayS
         setOrderedWords(newWordOrder)
         setIsLoadingSuggestions(false)
       }, 0)
+    } else if (showSuggestions) {
+      setOrderedWords(localFiltered.map((w) => ({ word: w })))
+      setIsLoadingSuggestions(false)
     } else {
-      const newWordOrder = localFiltered.map((w) => ({ word: w }))
-      setOrderedWords(newWordOrder)
+      setOrderedWords([])
       setIsLoadingSuggestions(false)
     }
-  }, [currentGuesses, usingOnlyFiltered, startingList, clickedGuess, countOnly])
+  }, [currentGuesses, usingOnlyFiltered, startingList, showSuggestions])
 
   useEffect(() => {
     if (currentGuesses.length > 0 && showDepth) {
-      const wordToAnalyze = clickedGuess || currentGuesses[currentGuesses.length - 1].word
+      const wordToAnalyze = currentGuesses[currentGuesses.length - 1].word
       let localFiltered = startingList.slice()
       for (const guess of currentGuesses) {
         if (guess.word === wordToAnalyze) {
@@ -134,7 +154,7 @@ function DisplayStatus({ guesses, startingList, onGuessClick, answer }: DisplayS
       setBinsWord(`${wordToAnalyze} (sorting ${localFiltered.length} words)`)
       setBins(newBins)
     }
-  }, [currentGuesses, showDepth, clickedGuess, startingList])
+  }, [currentGuesses, showDepth, startingList])
 
   const getEvaluationColor = (evaluation: string): string[] => {
     const colors: string[] = []
@@ -168,6 +188,31 @@ function DisplayStatus({ guesses, startingList, onGuessClick, answer }: DisplayS
     newBins = _.sortBy(newBins, (value: any) => (Object.values(value)[0] as any).length)
     setBinsWord(`${word} (sorting ${localFiltered.length} words)`)
     setBins(newBins)
+  }
+
+  const renderGuessTiles = (word: string, key: string, size: 'sm' | 'md' = 'md') => {
+    const colors = getEvaluationColor(key)
+    const dimension = size === 'sm' ? '32px' : '38px'
+    const fontSize = size === 'sm' ? '0.9rem' : '1rem'
+
+    return (
+      <div className="guess-tile-row">
+        {word.split('').map((letter, letterIndex) => (
+          <div
+            key={`${word}-${letterIndex}`}
+            className="guess-tile"
+            style={{
+              width: dimension,
+              height: dimension,
+              fontSize,
+              backgroundColor: getColorForEvaluation(colors[letterIndex]),
+            }}
+          >
+            {letter}
+          </div>
+        ))}
+      </div>
+    )
   }
 
   const handleGuessCardClick = async (guess: any, index: number) => {
@@ -266,73 +311,144 @@ function DisplayStatus({ guesses, startingList, onGuessClick, answer }: DisplayS
 
   return (
     <div>
-      <Container className="mt-4 mb-4">
-        {currentGuesses.length > 0 && (
-          <>
-            <div className="d-flex flex-column gap-3 mb-4">
-              {[...currentGuesses].reverse().map((guess, reversedIndex) => {
-                const index = currentGuesses.length - 1 - reversedIndex
-                const guessesUpTo = currentGuesses.slice(0, index + 1)
-                const remainingAfter = applyGuesses(startingList, guessesUpTo)
-                const remainingBefore =
-                  index === 0
-                    ? startingList.length
-                    : applyGuesses(startingList, currentGuesses.slice(0, index)).length
-
-                return (
-                  <div
-                    key={index}
-                    className="border rounded p-3"
-                    style={{ transition: 'background-color 0.2s' }}
+      <Container className="mt-4 mb-5 wordle-status-shell">
+        {currentGuesses.length > 0 ? (
+          <div className="solver-stack">
+            <section className="solver-panel solver-panel-highlight">
+              <div className="solver-panel-header">
+                <div>
+                  <p className="solver-panel-eyebrow mb-1">Next step</p>
+                  <h4 className="mb-1">{solveStage.title}</h4>
+                </div>
+                <div className="solver-toolbar">
+                  <Button
+                    variant={showSuggestions ? 'primary' : 'outline-light'}
+                    size="sm"
+                    onClick={() => setShowSuggestions((prev) => !prev)}
                   >
-                    <div className="d-flex align-items-center gap-2 mb-2">
-                      <Badge bg="secondary" className="me-2">
-                        #{index + 1}
-                      </Badge>
-                      <div className="d-flex gap-1">
-                        {guess.word.split('').map((letter, letterIndex) => {
-                          const colors = getEvaluationColor(guess.key)
-                          return (
-                            <div
-                              key={letterIndex}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                width: 'min(40px, 10vw)',
-                                height: 'min(40px, 10vw)',
-                                fontSize: 'calc(0.8rem + 1vw)',
-                                fontWeight: 'bold',
-                                color: 'white',
-                                backgroundColor: getColorForEvaluation(colors[letterIndex]),
-                                borderRadius: '4px',
-                              }}
-                            >
-                              {letter}
-                            </div>
-                          )
-                        })}
-                      </div>
-                      <code className="ms-auto text-muted">{guess.key}</code>
-                    </div>
+                    {showSuggestions ? 'Hide suggestions' : 'Show suggestions'}
+                  </Button>
+                  <Button
+                    variant="outline-light"
+                    size="sm"
+                    onClick={() => dispatch(setGuesses([]))}
+                  >
+                    Clear guesses
+                  </Button>
+                </div>
+              </div>
 
-                    <div className="text-muted small">
-                      <div className="d-flex gap-3 flex-wrap">
-                        <div>
-                          📊 <strong>Before:</strong> {remainingBefore} words
+              {latestGuess && (
+                <div className="solver-latest-row">
+                  <div>
+                    <p className="solver-stat-label mb-1">Latest guess</p>
+                    <div className="d-flex align-items-center gap-2 flex-wrap">
+                      {renderGuessTiles(latestGuess.word, latestGuess.key, 'sm')}
+                      <code className="solver-inline-code">{latestGuess.key}</code>
+                    </div>
+                  </div>
+
+                  <div className="solver-count-chip">
+                    <span className="solver-stat-label">Words left</span>
+                    <strong>{remainingCount.toLocaleString()}</strong>
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {showSuggestions && (
+              <section className="solver-panel">
+                <div className="solver-panel-header">
+                  <div>
+                    <p className="solver-panel-eyebrow mb-1">Recommendations</p>
+                    <h5 className="mb-1">Suggested next guesses</h5>
+                  </div>
+                  <Button
+                    variant="outline-light"
+                    size="sm"
+                    onClick={() => setUsingOnlyFiltered((prev) => !prev)}
+                  >
+                    {usingOnlyFiltered ? 'Use full word list' : 'Use remaining answers only'}
+                  </Button>
+                </div>
+
+                {isLoadingSuggestions ? (
+                  <div className="solver-loading-state text-center py-4">
+                    <Spinner animation="border" role="status" className="me-2" />
+                    <span>Calculating suggestions...</span>
+                  </div>
+                ) : currentFilteredList.length >= 1500 ? (
+                  <div className="solver-soft-card">
+                    <strong>Still very broad.</strong> Suggestions get sharper after one more filtering guess.
+                  </div>
+                ) : (
+                  <div className="solver-suggestion-grid">
+                    {orderedWords.slice(0, 6).map((word, i) => (
+                      <div key={`ordered-${i}`} className="solver-suggestion-card">
+                        <span className="solver-suggestion-rank">#{i + 1}</span>
+                        <code>{word.word}</code>
+                        <span className="solver-suggestion-score">
+                          {currentFilteredList.length > 0 && word.score
+                            ? `${((100 * word.score) / currentFilteredList.length).toFixed(1)}% solve now`
+                            : 'Strong separator'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
+            <section className="solver-panel">
+              <div className="solver-panel-header">
+                <div>
+                  <p className="solver-panel-eyebrow mb-1">History</p>
+                  <h5 className="mb-1">Guess history</h5>
+                </div>
+              </div>
+
+              <div className="guess-history-list">
+                {[...currentGuesses].reverse().map((guess, reversedIndex) => {
+                  const index = currentGuesses.length - 1 - reversedIndex
+                  const guessesUpTo = currentGuesses.slice(0, index + 1)
+                  const remainingAfter = applyGuesses(startingList, guessesUpTo)
+                  const remainingBefore =
+                    index === 0
+                      ? startingList.length
+                      : applyGuesses(startingList, currentGuesses.slice(0, index)).length
+                  const isLatest = index === currentGuesses.length - 1
+
+                  return (
+                    <article
+                      key={index}
+                      className={`guess-history-card ${isLatest ? 'is-latest' : ''}`}
+                    >
+                      <div className="guess-history-main">
+                        <div className="guess-history-heading">
+                          <Badge bg={isLatest ? 'primary' : 'secondary'}>#{index + 1}</Badge>
+                          {isLatest && <span className="guess-history-latest">Latest</span>}
                         </div>
-                        <div>
-                          ✂️ <strong>After:</strong> {remainingAfter.length} words
+
+                        <div className="guess-history-tiles-wrap">
+                          {renderGuessTiles(guess.word, guess.key)}
+                        </div>
+
+                        <div className="guess-history-stats">
+                          <span className="guess-history-stat-label">Remaining</span>
+                          <strong>
+                            {remainingBefore.toLocaleString()} → {remainingAfter.length.toLocaleString()}
+                          </strong>
                         </div>
                       </div>
-                      <div className="mt-2 d-flex gap-2 align-items-center">
-                        <small
-                          className="text-primary"
-                          style={{ cursor: 'pointer' }}
+
+                      <div className="guess-history-actions">
+                        <Button
+                          variant="link"
+                          className="guess-link-button"
                           onClick={() => handleGuessCardClick(guess, index)}
                         >
-                          🔍 Click for bins
-                        </small>
+                          View breakdown
+                        </Button>
                         <Button
                           variant="outline-primary"
                           size="sm"
@@ -341,7 +457,6 @@ function DisplayStatus({ guesses, startingList, onGuessClick, answer }: DisplayS
                             onGuessClick(index)
                           }}
                           title="Edit guess"
-                          className="ms-auto"
                         >
                           <BsPencil size={14} /> Edit
                         </Button>
@@ -352,152 +467,58 @@ function DisplayStatus({ guesses, startingList, onGuessClick, answer }: DisplayS
                             e.stopPropagation()
                             setError('')
                             dispatch(removeGuess(index))
-                            if (clickedGuess === guess.word) {
-                              setClickedGuess(null)
-                            }
                           }}
                           title="Delete guess"
                         >
                           <TiTimes size={14} /> Delete
                         </Button>
                       </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </>
-        )}
-
-        {guesses.length === 0 && (
-          <p className="text-center">
-            There {currentFilteredList.length === 1 ? 'is ' : 'are'} {currentFilteredList.length}{' '}
-            word{currentFilteredList.length === 1 ? '' : 's'} left
-          </p>
-        )}
-
-        {currentGuesses.length > 0 && (
-          <>
-            <hr style={{ color: 'white' }} />
-            <div className="text-center mb-3">
-              <Button
-                variant="primary"
-                size="sm"
-                className="me-2"
-                onClick={() => dispatch(setGuesses([]))}
-              >
-                Clear Guesses
-              </Button>
-              <p className="mt-2 mb-3">
-                There {currentFilteredList.length === 1 ? 'is' : 'are'}
-                <span className="mx-2 fw-bold">{currentFilteredList.length}</span>word
-                {currentFilteredList.length === 1 ? '' : 's'} left{' '}
-                {clickedGuess && `after guessing ${clickedGuess}`}
-              </p>
-              <Button variant="dark" size="sm" onClick={() => setCountOnly(!countOnly)}>
-                {countOnly ? 'Show Suggestions' : 'Show Word Count Only'}
-              </Button>
-            </div>
-
-            {!countOnly && (
-              <>
-                {isLoadingSuggestions ? (
-                  <div className="text-center py-4">
-                    <Spinner animation="border" role="status" className="me-2" />
-                    <span>Calculating suggestions...</span>
-                  </div>
-                ) : (
-                  <>
-                    {!showDepth && orderedWords.length > 0 && (
-                      <>
-                        <p className="text-center">
-                          Showing best{' '}
-                          {usingOnlyFiltered ? 'among filtered' : 'overall (including eliminated)'}{' '}
-                          choices
-                        </p>
-                        <div className="text-center mb-3">
-                          {usingOnlyFiltered ? (
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              onClick={() => setUsingOnlyFiltered(false)}
-                            >
-                              Use Full Wordlist
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              onClick={() => setUsingOnlyFiltered(true)}
-                            >
-                              Use Only Valid Words
-                            </Button>
-                          )}
-                        </div>
-                        <div className="row justify-content-center mb-3">
-                          <div className="col-10">
-                            <table className="table table-dark table-striped mt-3 w-100">
-                              <thead>
-                                <tr>
-                                  <th scope="col">WORD</th>
-                                  <th scope="col">CHANCE OF SOLVING</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {orderedWords.slice(0, 10).map((word, i) => (
-                                  <tr key={`ordered-${i}`}>
-                                    <td>{word.word}</td>
-                                    <td>
-                                      {(
-                                        (100 * (word.score || 0)) /
-                                        currentFilteredList.length
-                                      ).toFixed(1)}
-                                      %
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </>
-                )}
-                <hr style={{ color: 'white' }} />
-              </>
-            )}
-          </>
-        )}
-
-        {currentGuesses.length > 0 && !countOnly && (
-          <div className="text-center mb-3">
-            {showDepth ? (
-              <Button variant="dark" size="sm" onClick={() => setShowDepth(false)}>
-                Hide Analysis
-              </Button>
-            ) : (
-              <Button
-                variant="dark"
-                size="sm"
-                onClick={() => {
-                  setShowDepth(true)
-                  const wordToAnalyze =
-                    clickedGuess || currentGuesses[currentGuesses.length - 1].word
-                  createBinsForGuess(wordToAnalyze)
-                }}
-              >
-                Show Analysis
-              </Button>
-            )}
-            {showDepth && (
-              <div className="mt-3">
-                <h2>{binsWord}</h2>
-                <BinsTable bins={bins} />
+                    </article>
+                  )
+                })}
               </div>
-            )}
+            </section>
+
+            <section className="solver-panel">
+              <div className="solver-panel-header">
+                <div>
+                  <p className="solver-panel-eyebrow mb-1">Advanced</p>
+                  <h5 className="mb-1">Pattern analysis</h5>
+                </div>
+                {latestGuess && (
+                  <Button
+                    variant="outline-light"
+                    size="sm"
+                    onClick={() => {
+                      if (showDepth) {
+                        setShowDepth(false)
+                        return
+                      }
+
+                      setShowDepth(true)
+                      createBinsForGuess(latestGuess.word)
+                    }}
+                  >
+                    {showDepth ? 'Hide analysis' : `Analyze ${latestGuess.word}`}
+                  </Button>
+                )}
+              </div>
+
+              {showDepth && (
+                <div className="solver-analysis-wrap mt-3">
+                  <h2 className="h5 mb-3">{binsWord}</h2>
+                  <BinsTable bins={bins} />
+                </div>
+              )}
+            </section>
           </div>
+        ) : (
+          <section className="solver-panel solver-empty-panel text-center">
+            <p className="solver-panel-eyebrow mb-2">Ready when you are</p>
+            <h5 className="mb-2">Start with your first guess</h5>
+          </section>
         )}
+
         {error && <p className="error text-center">{error}</p>}
       </Container>
 

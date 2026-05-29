@@ -12,11 +12,16 @@ export interface Guess {
   key: string
 }
 
+export interface RecentAnswer {
+  date: string
+  word: string
+}
+
 export interface GameState {
   guesses: Guess[]
-  useTodaysWord: boolean
-  todaysWord: string | null
-  todaysWordDate: string | null
+  recentAnswers: RecentAnswer[]
+  selectedDateIndex: number
+  showWord: boolean
 }
 
 /**

@@ -1,12 +1,12 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import { getCanonical, getCanonicalKey } from '../advancedUtils'
-import type { GameState, Guess } from './types'
+import type { GameState, Guess, RecentAnswer } from './types'
 
 const initialState: GameState = {
   guesses: [],
-  useTodaysWord: true,
-  todaysWord: null,
-  todaysWordDate: null,
+  recentAnswers: [],
+  selectedDateIndex: 0,
+  showWord: false,
 }
 
 interface AddGuessPayload {
@@ -53,19 +53,19 @@ const gameSlice = createSlice({
       state.guesses = action.payload
     },
 
-    setUseTodaysWord: (state, action: PayloadAction<boolean>) => {
-      state.useTodaysWord = action.payload
+    setRecentAnswers: (state, action: PayloadAction<RecentAnswer[]>) => {
+      state.recentAnswers = action.payload
     },
 
-    setTodaysWord: (state, action: PayloadAction<string | null>) => {
-      state.todaysWord = action.payload
+    setSelectedDateIndex: (state, action: PayloadAction<number>) => {
+      state.selectedDateIndex = action.payload
     },
 
-    setTodaysWordDate: (state, action: PayloadAction<string | null>) => {
-      state.todaysWordDate = action.payload
+    setShowWord: (state, action: PayloadAction<boolean>) => {
+      state.showWord = action.payload
     },
   },
 })
 
-export const { addGuess, removeGuess, updateGuess, resetGuesses, setGuesses, setUseTodaysWord, setTodaysWord, setTodaysWordDate } = gameSlice.actions
+export const { addGuess, removeGuess, updateGuess, resetGuesses, setGuesses, setRecentAnswers, setSelectedDateIndex, setShowWord } = gameSlice.actions
 export default gameSlice.reducer

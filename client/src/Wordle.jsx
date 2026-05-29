@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { FiSettings } from 'react-icons/fi'
 import { MdOutlineScreenshot } from 'react-icons/md'
 import { AiOutlineBarChart } from 'react-icons/ai'
@@ -9,21 +9,19 @@ import {
   addGuess,
   updateGuess,
   setGuesses,
-  setTodaysWord,
-  setTodaysWordDate,
+  setRecentAnswers,
 } from './redux/gameSlice'
 import { useNavigate } from 'react-router-dom'
-import { Container, Card, Form, Button, Alert, Row, Col } from 'react-bootstrap'
+import { Container, Card, Form, Button, Alert, Row, Col, Modal } from 'react-bootstrap'
 import { trpc } from './trpc'
 
-import { evaluateToString } from './advancedUtils'
+import { applyGuesses, evaluateToString } from './advancedUtils'
 // import { commonPlusOfficial, nytAll, nytSolutions } from './wordlists/index'
 import likelyWordList from './wordlists/likely-word-list.json'
 
 import DisplayStatus from './DisplayStatus'
 import WordListModal from './WordListModal'
 import GameAnalysisModal from './GameAnalysisModal'
-import _ from 'lodash'
 import UploadScreenShotModal from './UploadScreenShotModal'
 import InteractiveGuessInput from './InteractiveGuessInput'
 
@@ -34,11 +32,40 @@ const wordLists = {
   likely: likelyWordList,
 }
 
+function getSolvePhase(remainingCount) {
+  if (remainingCount <= 1) {
+    return {
+      label: 'Solved',
+    }
+  }
+
+  if (remainingCount <= 10) {
+    return {
+      label: 'Endgame',
+    }
+  }
+
+  if (remainingCount <= 75) {
+    return {
+      label: 'Narrowing',
+    }
+  }
+
+  if (remainingCount <= 300) {
+    return {
+      label: 'Midgame',
+    }
+  }
+
+  return {
+    label: 'Wide Open',
+  }
+}
+
 function Wordle() {
   const [word, setWord] = useState('')
   const [key, setKey] = useState('')
   const [wordListName, setWordListName] = useState('likely')
-  const [currentFilteredList, setFiltered] = useState(wordLists[wordListName].slice())
   const inputEl = useRef(null)
   const [error, setError] = useState('')
   const [answerInput, setAnswerInput] = useState('')
@@ -46,6 +73,7 @@ function Wordle() {
   const [editWord, setEditWord] = useState('')
   const [editKey, setEditKey] = useState('')
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  const [showRemainingModal, setShowRemainingModal] = useState(false)
 
   useEffect(() => {
     const handleResize = () => {
@@ -59,41 +87,37 @@ function Wordle() {
   const navigate = useNavigate()
   const modals = useSelector((state) => state.ui.modals)
   const guesses = useSelector((state) => state.game.guesses)
-  const useTodaysWord = useSelector((state) => state.game.useTodaysWord)
-  const todaysWord = useSelector((state) => state.game.todaysWord)
-  const todaysWordDate = useSelector((state) => state.game.todaysWordDate)
+  const recentAnswers = useSelector((state) => state.game.recentAnswers)
+  const selectedDateIndex = useSelector((state) => state.game.selectedDateIndex)
+  const startingWordList = wordLists[wordListName]
+  const wordLength = startingWordList[0]?.length ?? 5
 
-  // Fetch today's word from the backend
-  const recentAnswersQuery = trpc.getRecentAnswers.useQuery({ limit: 1 })
+  const remainingWords = useMemo(
+    () => applyGuesses(startingWordList, guesses),
+    [startingWordList, guesses],
+  )
 
-  // Update todaysWord in Redux when query data changes
+  const solvePhase = useMemo(
+    () => getSolvePhase(remainingWords.length),
+    [remainingWords.length],
+  )
+
+  // Fetch recent answers from the backend
+  const recentAnswersQuery = trpc.getRecentAnswers.useQuery({ limit: 3 })
+
+  // Store recent answers in Redux and set initial answerInput
   useEffect(() => {
     if (
       recentAnswersQuery.data &&
       recentAnswersQuery.data.answers &&
       recentAnswersQuery.data.answers.length > 0
     ) {
-      const latestAnswer = recentAnswersQuery.data.answers[0]
-      dispatch(setTodaysWord(latestAnswer.word))
-      dispatch(setTodaysWordDate(latestAnswer.date))
-      // If useTodaysWord is enabled and answerInput is empty, set it
-      if (useTodaysWord && !answerInput) {
-        setAnswerInput(latestAnswer.word)
+      dispatch(setRecentAnswers(recentAnswersQuery.data.answers))
+      if (!answerInput) {
+        setAnswerInput(recentAnswersQuery.data.answers[0].word)
       }
     }
-  }, [recentAnswersQuery.data, dispatch])
-
-  // When useTodaysWord changes, update answerInput accordingly
-  useEffect(() => {
-    if (useTodaysWord && todaysWord) {
-      setAnswerInput(todaysWord)
-    }
-  }, [useTodaysWord, todaysWord])
-
-  useEffect(() => {
-    let newFilteredList = wordLists[wordListName].slice()
-    setFiltered(newFilteredList)
-  }, [wordListName, guesses])
+  }, [recentAnswersQuery.data, dispatch, answerInput])
 
   const handleAddGuess = (e) => {
     e.preventDefault()
@@ -136,69 +160,103 @@ function Wordle() {
   }
 
   return (
-    <div>
-      <Container className="mt-3">
-        <div className="d-flex justify-content-between align-items-center flex-nowrap">
+    <div className="wordle-page">
+      <Container className="mt-3 wordle-home-shell">
+        <div className="wordle-home-header">
           <div className="flex-shrink-1">
-            <h3 className="mb-1">Wordle Helper</h3>
-            {useTodaysWord && todaysWordDate && (
-              <small className="text-muted">
-                {new Date(todaysWordDate + 'T00:00:00').toLocaleDateString('en-US', {
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
-              </small>
-            )}
+            <div className="wordle-title-wrap">
+              <h3 className="mb-1">Wordle Helper</h3>
+              {recentAnswers.length > 0 && selectedDateIndex < recentAnswers.length && (
+                <small className="wordle-date-label">
+                  {new Date(recentAnswers[selectedDateIndex].date + 'T00:00:00').toLocaleDateString('en-US', {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
+                </small>
+              )}
+            </div>
           </div>
 
-          <div className="d-flex justify-content-end mb-4 flex-shrink-0">
-            <div className="d-flex flex-nowrap">
+          <div className="wordle-toolbar flex-shrink-0">
               <span
-                className="selectable me-3"
+                className="selectable wordle-toolbar-button"
                 onClick={() => navigate('/auto-play')}
                 title="Auto-Play"
               >
                 <FaRobot size={'2em'} />
               </span>
               <span
-                className="selectable me-3"
+                className="selectable wordle-toolbar-button"
                 onClick={() => dispatch(setModalState({ modalName: 'upload', isOpen: true }))}
+                title="Import screenshot"
               >
                 <MdOutlineScreenshot size={'2em'} />
               </span>
               <span
-                className="selectable me-3"
+                className="selectable wordle-toolbar-button"
                 onClick={() => dispatch(setModalState({ modalName: 'analysis', isOpen: true }))}
+                title="Game analysis"
               >
                 <AiOutlineBarChart size={'2em'} />
               </span>
               <span
-                className="selectable"
+                className="selectable wordle-toolbar-button"
                 onClick={() => dispatch(setModalState({ modalName: 'wordList', isOpen: true }))}
+                title="Settings and word list"
               >
                 <FiSettings size={'2em'} />
               </span>
-            </div>
           </div>
         </div>
-      </Container>
 
-      <Container className="text-center">
-        <Row className="mb-4 justify-content-center">
-          <Col lg={6}>
-            <Card>
+        <Row className="g-3 align-items-stretch mb-4">
+          <Col lg={5}>
+            <Card className="wordle-hero-card border-0 h-100">
               <Card.Body>
-                <Card.Title>
-                  {editingGuessIndex === null ? 'Add New Guess' : 'Edit Guess'}
+                <div className="wordle-hero-topline">
+                  <span className="wordle-hero-eyebrow">Current solve state</span>
+                  <span className="wordle-phase-pill">{solvePhase.label}</span>
+                </div>
+
+                <button
+                  className="wordle-hero-count-btn"
+                  onClick={() => setShowRemainingModal(true)}
+                  title="View remaining words"
+                >
+                  <div className="wordle-hero-count">{remainingWords.length.toLocaleString()}</div>
+                  <div className="wordle-hero-copy">
+                    possible answer{remainingWords.length === 1 ? '' : 's'} · tap to view
+                  </div>
+                </button>
+                <div className="wordle-hero-meta">
+                  {guesses.length === 0
+                    ? `${startingWordList.length.toLocaleString()} total`
+                    : `${guesses.length} guess${guesses.length === 1 ? '' : 'es'} · from ${startingWordList.length.toLocaleString()}`}
+                </div>
+                {remainingWords.length > 0 && remainingWords.length < startingWordList.length && (
+                  <div className="wordle-hero-solve-pct">
+                    {remainingWords.length === 1
+                      ? '100% — you have it!'
+                      : `${(100 / remainingWords.length).toFixed(1)}% chance next guess wins`}
+                  </div>
+                )}
+              </Card.Body>
+            </Card>
+          </Col>
+
+          <Col lg={7}>
+            <Card className="wordle-entry-card border-0 h-100">
+              <Card.Body>
+                <Card.Title className="wordle-entry-title">
+                  {editingGuessIndex === null ? 'Enter guess' : 'Edit guess'}
                 </Card.Title>
 
                 {editingGuessIndex === null && (
                   <Form onSubmit={handleAddGuess}>
-                    <Form.Group className="mb-3">
-                      {/* <Form.Label>Your Guess</Form.Label> */}
+                    <Form.Group className="mb-3 wordle-guess-field">
                       <Form.Control
-                        className="font-mono text-uppercase"
+                        className="font-mono text-uppercase wordle-guess-input"
                         value={word}
                         onChange={(e) => {
                           setWord(e.target.value.toUpperCase())
@@ -213,28 +271,29 @@ function Wordle() {
                             setKey(newKey)
                           }
                         }}
-                        placeholder="GUESS"
+                        placeholder="CRANE"
                         maxLength="5"
                         ref={inputEl}
                       />
                     </Form.Group>
 
                     {isMobile ? (
-                      <>
+                      <div className="wordle-feedback-panel">
                         <InteractiveGuessInput word={word} currentKey={key} onKeyChange={setKey} />
-                        <Form.Text className="text-muted">Tap boxes to change colors</Form.Text>
-                      </>
+                        <Form.Text className="wordle-helper-text">
+                          Tap tiles to set feedback.
+                        </Form.Text>
+                      </div>
                     ) : (
-                      <Form.Group className="mb-3">
-                        {/* <Form.Label>Response</Form.Label> */}
+                      <Form.Group className="mb-3 wordle-guess-field">
                         <Form.Control
-                          className="font-mono text-uppercase"
+                          className="font-mono text-uppercase wordle-guess-input"
                           value={key}
                           onChange={(e) => setKey(e.target.value.toUpperCase())}
-                          placeholder="response"
+                          placeholder="GY---"
                           maxLength="5"
                         />
-                        <Form.Text className="text-muted">
+                        <Form.Text className="wordle-helper-text">
                           Y = yellow, G = green, other = miss
                         </Form.Text>
                       </Form.Group>
@@ -245,11 +304,11 @@ function Wordle() {
                     <Button
                       variant="primary"
                       type="submit"
-                      className="w-100"
+                      className="w-100 wordle-primary-action"
                       disabled={
                         !(
                           word.length === key.length &&
-                          word.length === currentFilteredList[0].length
+                          word.length === wordLength
                         )
                       }
                     >
@@ -260,10 +319,10 @@ function Wordle() {
 
                 {editingGuessIndex !== null && (
                   <Form onSubmit={saveEditedGuess}>
-                    <Form.Group className="mb-3">
+                    <Form.Group className="mb-3 wordle-guess-field">
                       <Form.Label>Guess</Form.Label>
                       <Form.Control
-                        className="font-mono text-uppercase"
+                        className="font-mono text-uppercase wordle-guess-input"
                         value={editWord}
                         onChange={(e) => setEditWord(e.target.value.toUpperCase())}
                         placeholder="GUESS"
@@ -272,31 +331,36 @@ function Wordle() {
                     </Form.Group>
 
                     {isMobile ? (
-                      <>
+                      <div className="wordle-feedback-panel">
                         <InteractiveGuessInput
                           word={editWord}
                           currentKey={editKey}
                           onKeyChange={setEditKey}
                         />
-                        <Form.Text className="text-muted">Tap boxes to change colors</Form.Text>
-                      </>
+                        <Form.Text className="wordle-helper-text">
+                          Tap tiles to set feedback.
+                        </Form.Text>
+                      </div>
                     ) : (
-                      <Form.Group className="mb-3">
+                      <Form.Group className="mb-3 wordle-guess-field">
                         <Form.Label>Response</Form.Label>
                         <Form.Control
-                          className="font-mono text-uppercase"
+                          className="font-mono text-uppercase wordle-guess-input"
                           value={editKey}
                           onChange={(e) => setEditKey(e.target.value.toUpperCase())}
-                          placeholder="response"
+                          placeholder="GY---"
                           maxLength="5"
                         />
+                        <Form.Text className="wordle-helper-text">
+                          Y = yellow, G = green, other = miss
+                        </Form.Text>
                       </Form.Group>
                     )}
 
                     {error !== '' && <Alert variant="danger">{error}</Alert>}
 
-                    <div className="d-flex gap-2">
-                      <Button variant="primary" type="submit" className="flex-grow-1">
+                    <div className="d-flex gap-2 flex-column flex-sm-row">
+                      <Button variant="primary" type="submit" className="flex-grow-1 wordle-primary-action">
                         Save
                       </Button>
                       <Button
@@ -317,8 +381,7 @@ function Wordle() {
       </Container>
 
       <DisplayStatus
-        guesses={guesses}
-        startingList={currentFilteredList}
+        startingList={startingWordList}
         onGuessClick={startEditingGuess}
         answer={answerInput}
       />
@@ -349,9 +412,31 @@ function Wordle() {
           dispatch(setModalState({ modalName: 'analysis', isOpen: false }))
         }}
         guesses={guesses}
-        wordList={currentFilteredList}
+        wordList={startingWordList}
         answer={answerInput}
       />
+
+      <Modal show={showRemainingModal} onHide={() => setShowRemainingModal(false)} size="sm" scrollable>
+        <Modal.Header closeButton>
+          <Modal.Title>
+            {remainingWords.length.toLocaleString()} remaining word{remainingWords.length === 1 ? '' : 's'}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {remainingWords.length > 0 && remainingWords.length < startingWordList.length && (
+            <p className="wordle-modal-solve-pct mb-3">
+              {remainingWords.length === 1
+                ? '100% — you have it!'
+                : `${(100 / remainingWords.length).toFixed(1)}% chance next guess wins`}
+            </p>
+          )}
+          <div className="remaining-words-grid">
+            {remainingWords.map((w) => (
+              <code key={w} className="remaining-word-chip">{w}</code>
+            ))}
+          </div>
+        </Modal.Body>
+      </Modal>
     </div>
   )
 }

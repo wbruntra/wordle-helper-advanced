@@ -1,0 +1,3 @@
+{
+  "payload": "[{\"type\":\"game/setRecentAnswers\",\"payload\":[{\"date\":\"2026-05-29\",\"word\":\"CLANG\"},{\"date\":\"2026-05-28\",\"word\":\"DIVOT\"},{\"date\":\"2026-05-27\",\"word\":\"STUFF\"}]},{\"type\":\"game/addGuess\",\"payload\":{\"word\":\"CRATE\",\"key\":\"G-G--\"}},{\"type\":\"game/addGuess\",\"payload\":{\"word\":\"GHOST\",\"key\":\"Y----\"}}]"
+}
