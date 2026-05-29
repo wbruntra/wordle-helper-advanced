@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "api": "bun --watch ./bin/www",
-    "start": "node ./dist/bin/www",
-    "client": "cd client && bun run dev"
+    "api": "portless wordle-api bun --watch bin/www",
+    "client": "cd client && bun run dev",
+    "dev": "bun run --parallel api client"
   },
   "keywords": [],
   "author": "",
