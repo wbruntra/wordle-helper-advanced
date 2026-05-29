@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FiSettings } from 'react-icons/fi'
 import { MdOutlineScreenshot } from 'react-icons/md'
 import { AiOutlineBarChart } from 'react-icons/ai'
@@ -16,6 +16,7 @@ import { Container, Card, Form, Button, Alert, Row, Col, Modal } from 'react-boo
 import { trpc } from './trpc'
 
 import { applyGuesses, evaluateToString } from './advancedUtils'
+import { orderEntireWordList } from './utils'
 // import { commonPlusOfficial, nytAll, nytSolutions } from './wordlists/index'
 import likelyWordList from './wordlists/likely-word-list.json'
 
@@ -74,6 +75,7 @@ function Wordle() {
   const [editKey, setEditKey] = useState('')
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [showRemainingModal, setShowRemainingModal] = useState(false)
+  const [scoredRemainingWords, setScoredRemainingWords] = useState([])
 
   useEffect(() => {
     const handleResize = () => {
@@ -101,6 +103,24 @@ function Wordle() {
     () => getSolvePhase(remainingWords.length),
     [remainingWords.length],
   )
+
+  useEffect(() => {
+    if (!showRemainingModal) return
+    if (remainingWords.length === 0 || remainingWords.length >= 1500) {
+      setScoredRemainingWords(remainingWords.map((w) => ({ word: w })))
+      return
+    }
+    setTimeout(() => {
+      const scored = orderEntireWordList(remainingWords, {
+        only_filtered: true,
+        startingList: startingWordList,
+      })
+      // orderEntireWordList returns [] when no filtering has happened yet
+      setScoredRemainingWords(
+        scored.length > 0 ? scored : remainingWords.map((w) => ({ word: w })),
+      )
+    }, 0)
+  }, [showRemainingModal, remainingWords, startingWordList])
 
   // Fetch recent answers from the backend
   const recentAnswersQuery = trpc.getRecentAnswers.useQuery({ limit: 3 })
@@ -133,11 +153,11 @@ function Wordle() {
     inputEl.current.focus()
   }
 
-  const startEditingGuess = (index) => {
+  const startEditingGuess = useCallback((index) => {
     setEditingGuessIndex(index)
     setEditWord(guesses[index].word)
     setEditKey(guesses[index].key)
-  }
+  }, [guesses])
 
   const saveEditedGuess = (e) => {
     e.preventDefault()
@@ -430,11 +450,30 @@ function Wordle() {
                 : `${(100 / remainingWords.length).toFixed(1)}% chance next guess wins`}
             </p>
           )}
-          <div className="remaining-words-grid">
-            {remainingWords.map((w) => (
-              <code key={w} className="remaining-word-chip">{w}</code>
-            ))}
-          </div>
+          {scoredRemainingWords.length > 0 && scoredRemainingWords[0].score != null ? (
+            <table className="remaining-words-table">
+              <thead>
+                <tr>
+                  <th>Word</th>
+                  <th>Solve chance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scoredRemainingWords.map(({ word, score }) => (
+                  <tr key={word}>
+                    <td><code>{word}</code></td>
+                    <td>{((100 * score) / remainingWords.length).toFixed(1)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="remaining-words-grid">
+              {remainingWords.map((w) => (
+                <code key={w} className="remaining-word-chip">{w}</code>
+              ))}
+            </div>
+          )}
         </Modal.Body>
       </Modal>
     </div>

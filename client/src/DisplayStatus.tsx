@@ -5,7 +5,7 @@ import {
   getBins,
   evaluateToString,
 } from './advancedUtils'
-import { useEffect, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import _ from 'lodash'
 import { BsPencil } from 'react-icons/bs'
 import { TiTimes } from 'react-icons/ti'
@@ -104,6 +104,17 @@ function DisplayStatus({ startingList, onGuessClick, answer }: DisplayStatusProp
   const remainingCount = currentFilteredList.length
   const solveStage = getSolveStage(remainingCount)
   const latestGuess = currentGuesses[currentGuesses.length - 1] ?? null
+
+  const guessRemainingCounts = useMemo(() => {
+    return currentGuesses.map((_, index) => {
+      const remainingAfter = applyGuesses(startingList, currentGuesses.slice(0, index + 1))
+      const remainingBefore =
+        index === 0
+          ? startingList.length
+          : applyGuesses(startingList, currentGuesses.slice(0, index)).length
+      return { remainingAfter: remainingAfter.length, remainingBefore }
+    })
+  }, [currentGuesses, startingList])
 
   useEffect(() => {
     const localFiltered = applyGuesses(startingList, currentGuesses)
@@ -410,12 +421,7 @@ function DisplayStatus({ startingList, onGuessClick, answer }: DisplayStatusProp
               <div className="guess-history-list">
                 {[...currentGuesses].reverse().map((guess, reversedIndex) => {
                   const index = currentGuesses.length - 1 - reversedIndex
-                  const guessesUpTo = currentGuesses.slice(0, index + 1)
-                  const remainingAfter = applyGuesses(startingList, guessesUpTo)
-                  const remainingBefore =
-                    index === 0
-                      ? startingList.length
-                      : applyGuesses(startingList, currentGuesses.slice(0, index)).length
+                  const { remainingAfter, remainingBefore } = guessRemainingCounts[index]
                   const isLatest = index === currentGuesses.length - 1
 
                   return (
@@ -436,7 +442,7 @@ function DisplayStatus({ startingList, onGuessClick, answer }: DisplayStatusProp
                         <div className="guess-history-stats">
                           <span className="guess-history-stat-label">Remaining</span>
                           <strong>
-                            {remainingBefore.toLocaleString()} → {remainingAfter.length.toLocaleString()}
+                            {remainingBefore.toLocaleString()} → {remainingAfter.toLocaleString()}
                           </strong>
                         </div>
                       </div>
@@ -541,4 +547,4 @@ function DisplayStatus({ startingList, onGuessClick, answer }: DisplayStatusProp
   )
 }
 
-export default DisplayStatus
+export default memo(DisplayStatus)
