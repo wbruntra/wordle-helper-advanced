@@ -7,6 +7,7 @@ import {
 } from './advancedUtils'
 import { memo, useEffect, useMemo, useState } from 'react'
 import _ from 'lodash'
+import { AiOutlineBarChart } from 'react-icons/ai'
 import { BsPencil } from 'react-icons/bs'
 import { TiTimes } from 'react-icons/ti'
 import { useSelector, useDispatch } from 'react-redux'
@@ -55,41 +56,11 @@ interface ModalGuessData {
 
 type BinObject = Record<string, { [key: string]: string[] | number }>
 
-function getSolveStage(remainingCount: number) {
-  if (remainingCount <= 1) {
-    return {
-      title: 'Solved',
-    }
-  }
-
-  if (remainingCount <= 10) {
-    return {
-      title: 'Endgame',
-    }
-  }
-
-  if (remainingCount <= 75) {
-    return {
-      title: 'Narrowing',
-    }
-  }
-
-  if (remainingCount <= 300) {
-    return {
-      title: 'Midgame',
-    }
-  }
-
-  return {
-    title: 'Wide open',
-  }
-}
 
 function DisplayStatus({ startingList, onGuessClick, answer }: DisplayStatusProps) {
   const dispatch = useDispatch()
   const currentGuesses = useSelector((state: RootState) => state.game.guesses)
   const [showDepth, setShowDepth] = useState(false)
-  const [currentFilteredList, setFiltered] = useState<string[]>(startingList.slice())
   const [error, setError] = useState('')
   const [bins, setBins] = useState<BinObject[]>([])
   const [binsWord, setBinsWord] = useState('')
@@ -97,8 +68,6 @@ function DisplayStatus({ startingList, onGuessClick, answer }: DisplayStatusProp
   const [modalGuessData, setModalGuessData] = useState<ModalGuessData | null>(null)
 
   const trpcUtils = trpc.useUtils()
-  const remainingCount = currentFilteredList.length
-  const solveStage = getSolveStage(remainingCount)
   const latestGuess = currentGuesses[currentGuesses.length - 1] ?? null
 
   const guessRemainingCounts = useMemo(() => {
@@ -114,8 +83,6 @@ function DisplayStatus({ startingList, onGuessClick, answer }: DisplayStatusProp
 
   useEffect(() => {
     const localFiltered = applyGuesses(startingList, currentGuesses)
-    setFiltered(localFiltered)
-
     if (localFiltered.length === 0) {
       setError('Something went wrong. Maybe you put in the wrong evaluation?')
     } else {
@@ -303,40 +270,7 @@ function DisplayStatus({ startingList, onGuessClick, answer }: DisplayStatusProp
       <Container className="mt-4 mb-5 wordle-status-shell">
         {currentGuesses.length > 0 ? (
           <div className="solver-stack">
-            <section className="solver-panel solver-panel-highlight">
-              <div className="solver-panel-header">
-                <div>
-                  <p className="solver-panel-eyebrow mb-1">Next step</p>
-                  <h4 className="mb-1">{solveStage.title}</h4>
-                </div>
-              </div>
-
-              {latestGuess && (
-                <div className="solver-latest-row">
-                  <div>
-                    <p className="solver-stat-label mb-1">Latest guess</p>
-                    <div className="d-flex align-items-center gap-2 flex-wrap">
-                      {renderGuessTiles(latestGuess.word, latestGuess.key, 'sm')}
-                      <code className="solver-inline-code">{latestGuess.key}</code>
-                    </div>
-                  </div>
-
-                  <div className="solver-count-chip">
-                    <span className="solver-stat-label">Words left</span>
-                    <strong>{remainingCount.toLocaleString()}</strong>
-                  </div>
-                </div>
-              )}
-            </section>
-
             <section className="solver-panel">
-              <div className="solver-panel-header">
-                <div>
-                  <p className="solver-panel-eyebrow mb-1">History</p>
-                  <h5 className="mb-1">Guess history</h5>
-                </div>
-              </div>
-
               <div className="guess-history-list">
                 {[...currentGuesses].reverse().map((guess, reversedIndex) => {
                   const index = currentGuesses.length - 1 - reversedIndex
@@ -348,55 +282,38 @@ function DisplayStatus({ startingList, onGuessClick, answer }: DisplayStatusProp
                       key={index}
                       className={`guess-history-card ${isLatest ? 'is-latest' : ''}`}
                     >
-                      <div className="guess-history-main">
-                        <div className="guess-history-heading">
-                          <Badge bg={isLatest ? 'primary' : 'secondary'}>#{index + 1}</Badge>
-                          {isLatest && <span className="guess-history-latest">Latest</span>}
-                        </div>
-
-                        <div className="guess-history-tiles-wrap">
-                          {renderGuessTiles(guess.word, guess.key)}
-                        </div>
-
-                        <div className="guess-history-stats">
-                          <span className="guess-history-stat-label">Remaining</span>
-                          <strong>
-                            {remainingBefore.toLocaleString()} → {remainingAfter.toLocaleString()}
-                          </strong>
-                        </div>
+                      <div className="guess-history-row1">
+                        <Badge bg={isLatest ? 'primary' : 'secondary'} className="flex-shrink-0">#{index + 1}</Badge>
+                        {renderGuessTiles(guess.word, guess.key)}
                       </div>
-
-                      <div className="guess-history-actions">
-                        <Button
-                          variant="link"
-                          className="guess-link-button"
-                          onClick={() => handleGuessCardClick(guess, index)}
-                        >
-                          View breakdown
-                        </Button>
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onGuessClick(index)
-                          }}
-                          title="Edit guess"
-                        >
-                          <BsPencil size={14} /> Edit
-                        </Button>
-                        <Button
-                          variant="outline-danger"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setError('')
-                            dispatch(removeGuess(index))
-                          }}
-                          title="Delete guess"
-                        >
-                          <TiTimes size={14} /> Delete
-                        </Button>
+                      <div className="guess-history-row2">
+                        <span className="guess-history-stats">{remainingBefore.toLocaleString()} → {remainingAfter.toLocaleString()}</span>
+                        <div className="guess-history-actions">
+                          <Button
+                            variant="link"
+                            className="guess-link-button"
+                            onClick={() => handleGuessCardClick(guess, index)}
+                            title="View breakdown"
+                          >
+                            <AiOutlineBarChart size={15} />
+                          </Button>
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            onClick={(e) => { e.stopPropagation(); onGuessClick(index) }}
+                            title="Edit"
+                          >
+                            <BsPencil size={12} />
+                          </Button>
+                          <Button
+                            variant="outline-danger"
+                            size="sm"
+                            onClick={(e) => { e.stopPropagation(); setError(''); dispatch(removeGuess(index)) }}
+                            title="Delete"
+                          >
+                            <TiTimes size={12} />
+                          </Button>
+                        </div>
                       </div>
                     </article>
                   )
@@ -404,45 +321,29 @@ function DisplayStatus({ startingList, onGuessClick, answer }: DisplayStatusProp
               </div>
             </section>
 
-            <section className="solver-panel">
-              <div className="solver-panel-header">
-                <div>
-                  <p className="solver-panel-eyebrow mb-1">Advanced</p>
-                  <h5 className="mb-1">Pattern analysis</h5>
-                </div>
-                {latestGuess && (
-                  <Button
-                    variant="outline-light"
-                    size="sm"
-                    onClick={() => {
-                      if (showDepth) {
-                        setShowDepth(false)
-                        return
-                      }
-
-                      setShowDepth(true)
-                      createBinsForGuess(latestGuess.word)
-                    }}
-                  >
-                    {showDepth ? 'Hide analysis' : `Analyze ${latestGuess.word}`}
-                  </Button>
+            {latestGuess && (
+              <section className="solver-panel solver-analysis-panel">
+                <Button
+                  variant="outline-light"
+                  size="sm"
+                  onClick={() => {
+                    if (showDepth) { setShowDepth(false); return }
+                    setShowDepth(true)
+                    createBinsForGuess(latestGuess.word)
+                  }}
+                >
+                  {showDepth ? 'Hide analysis' : `Analyze ${latestGuess.word}`}
+                </Button>
+                {showDepth && (
+                  <div className="solver-analysis-wrap mt-3">
+                    <h2 className="h5 mb-3">{binsWord}</h2>
+                    <BinsTable bins={bins} />
+                  </div>
                 )}
-              </div>
-
-              {showDepth && (
-                <div className="solver-analysis-wrap mt-3">
-                  <h2 className="h5 mb-3">{binsWord}</h2>
-                  <BinsTable bins={bins} />
-                </div>
-              )}
-            </section>
+              </section>
+            )}
           </div>
-        ) : (
-          <section className="solver-panel solver-empty-panel text-center">
-            <p className="solver-panel-eyebrow mb-2">Ready when you are</p>
-            <h5 className="mb-2">Start with your first guess</h5>
-          </section>
-        )}
+        ) : null}
 
         {error && <p className="error text-center">{error}</p>}
       </Container>

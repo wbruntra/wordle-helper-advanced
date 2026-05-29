@@ -75,6 +75,7 @@ function Wordle() {
   const [editKey, setEditKey] = useState('')
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [showRemainingModal, setShowRemainingModal] = useState(false)
+  const [countAnimKey, setCountAnimKey] = useState(0)
 
   useEffect(() => {
     const handleResize = () => {
@@ -102,6 +103,10 @@ function Wordle() {
     () => getSolvePhase(remainingWords.length),
     [remainingWords.length],
   )
+
+  useEffect(() => {
+    setCountAnimKey((k) => k + 1)
+  }, [remainingWords.length])
 
   // Fetch recent answers from the backend
   const recentAnswersQuery = trpc.getRecentAnswers.useQuery({ limit: 3 })
@@ -237,29 +242,19 @@ function Wordle() {
           </div>
         </div>
 
-        <Row className="g-3 align-items-stretch mb-4">
+        <Row className="g-2 align-items-stretch mb-3">
           <Col lg={5}>
             <Card className="wordle-hero-card border-0 h-100">
               <Card.Body>
                 <div className="wordle-hero-topline">
-                  <span className="wordle-hero-eyebrow">Current solve state</span>
+                  <button
+                    className="wordle-hero-count-btn"
+                    onClick={() => setShowRemainingModal(true)}
+                    title="View remaining words"
+                  >
+                    <div key={countAnimKey} className="wordle-hero-count wordle-hero-count-anim">{remainingWords.length.toLocaleString()}</div>
+                  </button>
                   <span className="wordle-phase-pill">{solvePhase.label}</span>
-                </div>
-
-                <button
-                  className="wordle-hero-count-btn"
-                  onClick={() => setShowRemainingModal(true)}
-                  title="View remaining words"
-                >
-                  <div className="wordle-hero-count">{remainingWords.length.toLocaleString()}</div>
-                  <div className="wordle-hero-copy">
-                    possible answer{remainingWords.length === 1 ? '' : 's'} · tap to view
-                  </div>
-                </button>
-                <div className="wordle-hero-meta">
-                  {guesses.length === 0
-                    ? `${startingWordList.length.toLocaleString()} total`
-                    : `${guesses.length} guess${guesses.length === 1 ? '' : 'es'} · from ${startingWordList.length.toLocaleString()}`}
                 </div>
                 {remainingWordSolveChance && (
                   <div className="wordle-hero-solve-pct">{remainingWordSolveChance}</div>
@@ -271,13 +266,9 @@ function Wordle() {
           <Col lg={7}>
             <Card className="wordle-entry-card border-0 h-100">
               <Card.Body>
-                <Card.Title className="wordle-entry-title">
-                  {editingGuessIndex === null ? 'Enter guess' : 'Edit guess'}
-                </Card.Title>
-
                 {editingGuessIndex === null && (
                   <Form onSubmit={handleAddGuess}>
-                    <Form.Group className="mb-3 wordle-guess-field">
+                    <Form.Group className="wordle-guess-field">
                       <Form.Control
                         className="font-mono text-uppercase wordle-guess-input"
                         value={word}
@@ -300,7 +291,7 @@ function Wordle() {
                         <InteractiveGuessInput word={word} currentKey={key} onKeyChange={setKey} />
                       </div>
                     ) : (
-                      <Form.Group className="mb-3 wordle-guess-field">
+                      <Form.Group className="wordle-guess-field">
                         <Form.Control
                           className="font-mono text-uppercase wordle-guess-input"
                           value={key}
@@ -308,9 +299,6 @@ function Wordle() {
                           placeholder="GY---"
                           maxLength="5"
                         />
-                        <Form.Text className="wordle-helper-text">
-                          Y = yellow, G = green, other = miss
-                        </Form.Text>
                       </Form.Group>
                     )}
 
@@ -320,22 +308,16 @@ function Wordle() {
                       variant="primary"
                       type="submit"
                       className="w-100 wordle-primary-action"
-                      disabled={
-                        !(
-                          word.length === key.length &&
-                          word.length === wordLength
-                        )
-                      }
+                      disabled={word.length !== wordLength || key.length !== wordLength}
                     >
-                      Add Guess
+                      Add
                     </Button>
                   </Form>
                 )}
 
                 {editingGuessIndex !== null && (
                   <Form onSubmit={saveEditedGuess}>
-                    <Form.Group className="mb-3 wordle-guess-field">
-                      <Form.Label>Guess</Form.Label>
+                    <Form.Group className="wordle-guess-field">
                       <Form.Control
                         className="font-mono text-uppercase wordle-guess-input"
                         value={editWord}
@@ -354,8 +336,7 @@ function Wordle() {
                         />
                       </div>
                     ) : (
-                      <Form.Group className="mb-3 wordle-guess-field">
-                        <Form.Label>Response</Form.Label>
+                      <Form.Group className="wordle-guess-field">
                         <Form.Control
                           className="font-mono text-uppercase wordle-guess-input"
                           value={editKey}
@@ -363,24 +344,16 @@ function Wordle() {
                           placeholder="GY---"
                           maxLength="5"
                         />
-                        <Form.Text className="wordle-helper-text">
-                          Y = yellow, G = green, other = miss
-                        </Form.Text>
                       </Form.Group>
                     )}
 
                     {error !== '' && <Alert variant="danger">{error}</Alert>}
 
-                    <div className="d-flex gap-2 flex-column flex-sm-row">
+                    <div className="d-flex gap-2">
                       <Button variant="primary" type="submit" className="flex-grow-1 wordle-primary-action">
                         Save
                       </Button>
-                      <Button
-                        variant="secondary"
-                        type="button"
-                        className="flex-grow-1"
-                        onClick={cancelEditing}
-                      >
+                      <Button variant="secondary" type="button" className="flex-grow-1" onClick={cancelEditing}>
                         Cancel
                       </Button>
                     </div>
