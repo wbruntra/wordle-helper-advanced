@@ -189,6 +189,31 @@ $dark-gray: #282c34;
   border-radius: 22px;
 }
 
+.wordle-hero-card {
+  cursor: pointer;
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.18s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+
+  &:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(180deg, rgba(62, 68, 98, 0.98), rgba(46, 50, 67, 0.98));
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(155, 77, 202, 0.3);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(155, 77, 202, 0.8);
+    outline-offset: 4px;
+  }
+}
+
+.wordle-hero-label {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 0.15rem;
+}
+
 .wordle-hero-card .card-body,
 .wordle-entry-card .card-body {
   padding: 0.85rem;
@@ -417,6 +442,10 @@ $dark-gray: #282c34;
     color: rgba(255, 255, 255, 0.55);
     padding: 0.3rem 0.5rem 0.5rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+    &:last-child {
+      text-align: right;
+    }
   }
 
   td {

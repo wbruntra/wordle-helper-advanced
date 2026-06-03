@@ -169,18 +169,6 @@ function Wordle() {
     setShowRemainingModal(false)
   }, [])
 
-  const remainingWordSolveChance = useMemo(() => {
-    if (remainingWords.length <= 0 || remainingWords.length >= startingWordList.length) {
-      return null
-    }
-
-    if (remainingWords.length === 1) {
-      return '100% — you have it!'
-    }
-
-    return `${(100 / remainingWords.length).toFixed(1)}% chance next guess wins`
-  }, [remainingWords.length, startingWordList.length])
-
   return (
     <div className="wordle-page">
       <Container className="mt-3 wordle-home-shell">
@@ -244,21 +232,29 @@ function Wordle() {
 
         <Row className="g-2 align-items-stretch mb-3">
           <Col lg={5}>
-            <Card className="wordle-hero-card border-0 h-100">
+            <Card
+              className="wordle-hero-card border-0 h-100"
+              onClick={() => setShowRemainingModal(true)}
+              title="View remaining words"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setShowRemainingModal(true)
+                }
+              }}
+            >
               <Card.Body>
                 <div className="wordle-hero-topline">
-                  <button
-                    className="wordle-hero-count-btn"
-                    onClick={() => setShowRemainingModal(true)}
-                    title="View remaining words"
-                  >
-                    <div key={countAnimKey} className="wordle-hero-count wordle-hero-count-anim">{remainingWords.length.toLocaleString()}</div>
-                  </button>
+                  <div>
+                    <div key={countAnimKey} className="wordle-hero-count wordle-hero-count-anim">
+                      {remainingWords.length.toLocaleString()}
+                    </div>
+                    <div className="wordle-hero-label">words remaining</div>
+                  </div>
                   <span className="wordle-phase-pill">{solvePhase.label}</span>
                 </div>
-                {remainingWordSolveChance && (
-                  <div className="wordle-hero-solve-pct">{remainingWordSolveChance}</div>
-                )}
               </Card.Body>
             </Card>
           </Col>

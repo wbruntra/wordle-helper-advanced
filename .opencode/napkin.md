@@ -11,6 +11,8 @@
 - Add explicit DB teardown in backend tests that share connections so test runners do not hang.
 - For this app's UX, favor a simple daily-solver flow over dashboard-style density; optional tools should recede behind the main path.
 - On the mobile home screen, prefer terse labels and compact spacing over explanatory hints once the structure is clear.
+- Make the entire remaining-words count card on the main page clickable (with visual hover transitions and focus rings) to improve touch discoverability, rather than a small nested button.
+- Provide a toggle checkbox in the remaining words modal to allow using the full wordlist to find optimal helper/filler words.
 
 ## Patterns That Work
 - For UI feedback, inspect both the page shell and the component that renders the primary results before suggesting changes.

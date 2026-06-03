@@ -1,11 +1,14 @@
 import { memo, useEffect, useMemo, useState } from 'react'
-import { Modal } from 'react-bootstrap'
+import { Modal, Form } from 'react-bootstrap'
 
 import { orderEntireWordList } from './utils'
 
 function RemainingWordsModal({ show, onHide, remainingWords, startingList }) {
   const DISPLAY_LIMIT = 50
   const [scoredRemainingWords, setScoredRemainingWords] = useState([])
+  const [useFullWordlist, setUseFullWordlist] = useState(false)
+
+  const remainingSet = useMemo(() => new Set(remainingWords), [remainingWords])
 
   const remainingWordSolveChance = useMemo(() => {
     if (remainingWords.length <= 0 || remainingWords.length >= startingList.length) {
@@ -31,7 +34,7 @@ function RemainingWordsModal({ show, onHide, remainingWords, startingList }) {
 
     const timeoutId = setTimeout(() => {
       const scored = orderEntireWordList(remainingWords, {
-        only_filtered: true,
+        only_filtered: !useFullWordlist,
         startingList,
       })
 
@@ -41,7 +44,7 @@ function RemainingWordsModal({ show, onHide, remainingWords, startingList }) {
     }, 0)
 
     return () => clearTimeout(timeoutId)
-  }, [show, remainingWords, startingList])
+  }, [show, remainingWords, startingList, useFullWordlist])
 
   if (!show) {
     return null
@@ -59,6 +62,19 @@ function RemainingWordsModal({ show, onHide, remainingWords, startingList }) {
         </Modal.Title>
       </Modal.Header>
       <Modal.Body>
+        {remainingWords.length > 0 && remainingWords.length < 1500 && (
+          <Form.Group className="mb-3">
+            <Form.Check
+              type="checkbox"
+              id="use-full-wordlist-check"
+              label="Use full wordlist for best guesses"
+              checked={useFullWordlist}
+              onChange={(e) => setUseFullWordlist(e.target.checked)}
+              className="text-white-50"
+              style={{ fontSize: '0.85rem' }}
+            />
+          </Form.Group>
+        )}
         {remainingWordSolveChance && (
           <p className="wordle-modal-solve-pct mb-3">{remainingWordSolveChance}</p>
         )}
@@ -74,14 +90,22 @@ function RemainingWordsModal({ show, onHide, remainingWords, startingList }) {
               </tr>
             </thead>
             <tbody>
-              {displayedScoredWords.map(({ word, score }) => (
-                <tr key={word}>
-                  <td>
-                    <code>{word}</code>
-                  </td>
-                  <td>{((100 * score) / remainingWords.length).toFixed(1)}%</td>
-                </tr>
-              ))}
+              {displayedScoredWords.map(({ word, score }) => {
+                const isPossible = remainingSet.has(word)
+                return (
+                  <tr key={word}>
+                    <td>
+                      <code>{word}</code>
+                      {!isPossible && (
+                        <span className="ms-2 badge bg-secondary text-white font-size-xs" style={{ fontSize: '0.65rem' }}>
+                          Helper
+                        </span>
+                      )}
+                    </td>
+                    <td>{((100 * score) / remainingWords.length).toFixed(1)}%</td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         ) : (
