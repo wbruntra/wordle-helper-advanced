@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pill Box</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <header>
+    <button id="prev" aria-label="Previous day">‹</button>
+    <div class="date">
+      <h1 id="dateLabel"></h1>
+      <button id="today" class="link">Jump to today</button>
+    </div>
+    <button id="next" aria-label="Next day">›</button>
+  </header>
+
+  <div class="table-wrap">
+    <table id="grid"></table>
+  </div>
+  <p id="empty" hidden>No medications yet. Add one below.</p>
+
+  <section class="add">
+    <h2>Add medication</h2>
+    <form id="addForm">
+      <input id="name" placeholder="Name (e.g. Metformin)" required>
+      <input id="dose" placeholder="Dose (optional)">
+      <fieldset id="slotPicks"></fieldset>
+      <button type="submit">Add</button>
+    </form>
+  </section>
+  <p class="hint">Tap a cell to mark it taken (tap again to undo). Data is saved in this browser only.</p>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

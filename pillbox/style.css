@@ -1,0 +1,31 @@
+:root{--bg:#f6f7f9;--fg:#1c2330;--muted:#6b7487;--card:#fff;--line:#dfe3ea;--accent:#2f7de1;--ok:#2e9d5b;--okbg:#e3f5ea}
+@media (prefers-color-scheme:dark){:root{--bg:#12161d;--fg:#e6e9ef;--muted:#8b94a7;--card:#1b212b;--line:#2a3240;--accent:#5b9cf0;--ok:#4cc27f;--okbg:#18372a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.4 system-ui,sans-serif}
+main{max-width:760px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.date{text-align:center}
+h1{font-size:1.3rem;margin:0}
+h2{font-size:1rem;margin:0 0 8px}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:8px;padding:8px 14px}
+#prev,#next{font-size:1.4rem;padding:2px 14px}
+button.link{border:0;background:none;color:var(--accent);padding:0;font-size:.85rem}
+.table-wrap{margin-top:16px;overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%}
+th,td{border-bottom:1px solid var(--line);padding:8px;text-align:center}
+tr:last-child td{border-bottom:0}
+th{font-size:.8rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+th:first-child,td:first-child{text-align:left}
+.med b{display:block}
+.med small{color:var(--muted)}
+.med .rm{border:0;background:none;color:var(--muted);padding:0 0 0 6px;font-size:.8rem}
+td.off{background:repeating-linear-gradient(45deg,transparent 0 6px,var(--line) 6px 7px);opacity:.5}
+.cell{width:100%;min-width:76px;min-height:48px;padding:6px;border-style:dashed;color:var(--muted)}
+.cell.done{background:var(--okbg);border:1px solid var(--ok);color:var(--ok);font-weight:600}
+.cell small{display:block;font-weight:400}
+.add{margin-top:24px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+form{display:flex;flex-wrap:wrap;gap:8px}
+input{font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);flex:1 1 160px}
+fieldset{border:0;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:12px;flex-basis:100%}
+button[type=submit]{background:var(--accent);color:#fff;border-color:var(--accent)}
+.hint,#empty{color:var(--muted);font-size:.85rem;text-align:center}
