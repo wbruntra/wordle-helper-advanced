@@ -5,7 +5,11 @@
   "scripts": {
     "api": "portless wordle-api bun --watch bin/www",
     "client": "cd client && bun run dev",
-    "dev": "bun run --parallel api client"
+    "dev": "bun run --parallel api client",
+    "migrate": "bunx --bun knex migrate:latest --env development",
+    "build:client": "cd client && bun run build",
+    "deploy": "ansible-playbook ansible/deploy.yml -e deployment=production",
+    "deploy:nginx": "ansible-playbook ansible/deploy-nginx.yml -e deployment=production"
   },
   "keywords": [],
   "author": "",

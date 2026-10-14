@@ -20,7 +20,6 @@ yarn-debug.log*
 yarn-error.log*
 
 scrape/data
-ecosystem.config.js
 
 .env
 temp.js
@@ -34,3 +33,6 @@ eng.traineddata
 
 wordle.sqlite3
 update-wordle-answers.log
+# ansible secrets bundles
+ansible/files/*/secrets.js
+backups/

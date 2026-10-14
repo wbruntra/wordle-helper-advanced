@@ -5,7 +5,7 @@
  */
 module.exports = {
   development: {
-    client: 'sqlite3',
+    client: require('knex-bun-sqlite'),
     connection: {
       filename: './wordle.sqlite3',
     },
