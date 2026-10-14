@@ -8,8 +8,8 @@
     "dev": "bun run --parallel api client",
     "migrate": "bunx --bun knex migrate:latest --env development",
     "build:client": "cd client && bun run build",
-    "deploy": "ansible-playbook ansible/deploy.yml -e deployment=production",
-    "deploy:nginx": "ansible-playbook ansible/deploy-nginx.yml -e deployment=production"
+    "deploy": "ansible-playbook -i ansible/inventory.yml ansible/deploy.yml -e deployment=production",
+    "deploy:nginx": "ansible-playbook -i ansible/inventory.yml ansible/deploy-nginx.yml -e deployment=production"
   },
   "keywords": [],
   "author": "",
