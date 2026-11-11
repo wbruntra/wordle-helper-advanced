@@ -1,10 +1,9 @@
 import { test, expect, describe } from 'bun:test'
-import { evaluateToString, getAnswersMatchingKey, getBins } from '@advancedUtils'
+import { LIKELY_WORDS as likelyWords, binSizes, evaluate as evaluateToString, filterByGuess } from '@wordle/shared'
 import {
   autoPlayWordle,
   chooseBestGuessFromRemaining,
 } from './auto-play-wordle.js'
-import likelyWords from './likely-word-list.json' with { type: 'json' }
 
 // ============================================================================
 // CORE GAMEPLAY TESTS
@@ -185,7 +184,7 @@ describe('Strategy - getBins Optimization', () => {
     const result = await chooseBestGuessFromRemaining(remaining, 3)
 
     // Count the bins created by this choice
-    const bins = getBins(result.word, remaining, { returnObject: false })
+    const bins = binSizes(result.word, remaining)
     expect(bins.length).toBeGreaterThan(0)
   })
 

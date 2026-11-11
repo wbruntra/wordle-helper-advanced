@@ -1,0 +1,33 @@
+.board {
+  display: grid; gap: 5px; margin: 0 auto;
+  /* Size tiles to fit both width and the height left over by header and keyboard. */
+  --tile: min(62px, calc((100vw - 2 * var(--gutter) - 20px) / 5), calc((100dvh - 330px) / 6 - 5px));
+  width: max-content;
+}
+.board-row { display: grid; grid-template-columns: repeat(5, var(--tile)); gap: 5px; }
+.board-row-button { padding: 0; border: 0; background: none; border-radius: 4px; }
+.board-row-button:hover .tile { filter: brightness(1.12); }
+
+.tile {
+  display: grid; place-items: center; height: var(--tile);
+  border: 2px solid var(--tile-border-empty); background: transparent; color: var(--text);
+  font: 700 calc(var(--tile) * 0.5)/1 var(--font); text-transform: uppercase; user-select: none; padding: 0;
+}
+.tile-filled { border-color: var(--tile-border-filled); }
+.tile-pop { animation: pop 0.1s ease-out; }
+.tile-correct, .tile-present, .tile-absent { color: #fff; border-color: transparent; }
+.tile-correct { background: var(--correct); }
+.tile-present { background: var(--present); }
+.tile-absent { background: var(--absent); }
+.tile-tappable { cursor: pointer; }
+.tile-tappable.tile-filled { border-color: var(--text-muted); }
+
+/* Guesses are already known from the real game, so reveal the whole row at once, quickly. */
+.tile-flip { animation: reveal 0.5s ease-out backwards; }
+
+@keyframes pop { 50% { transform: scale(1.1); } }
+@keyframes reveal {
+  0% { transform: scale(0.8); opacity: 0.2; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}

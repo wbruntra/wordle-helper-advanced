@@ -4,12 +4,13 @@
   "main": "index.js",
   "scripts": {
     "api": "portless wordle-api bun --watch bin/www",
-    "client": "cd client && bun run dev",
+    "client": "cd client-v2 && bun run dev",
     "dev": "bun run --parallel api client",
     "migrate": "bun --bun run knex migrate:latest --env development",
-    "build:client": "cd client && bun run build",
+    "build:client": "cd client-v2 && bun run build",
     "deploy": "ansible-playbook -i ansible/inventory.yml ansible/deploy.yml -e deployment=production",
-    "deploy:nginx": "ansible-playbook -i ansible/inventory.yml ansible/deploy-nginx.yml -e deployment=production"
+    "deploy:nginx": "ansible-playbook -i ansible/inventory.yml ansible/deploy-nginx.yml -e deployment=production",
+    "typecheck": "bun check && bun check -p shared && bun check -p client-v2"
   },
   "keywords": [],
   "author": "",
@@ -20,11 +21,11 @@
     "@aws-sdk/s3-request-presigner": "^3.908.0",
     "@jimp/utils": "^1.6.0",
     "@reduxjs/toolkit": "^2.9.0",
-    "@trpc/client": "^11.6.0",
-    "@trpc/server": "^11.6.0",
+    "@wordle/shared": "workspace:*",
     "axios": "^1.12.2",
     "cheerio": "^1.1.2",
     "cors": "^2.8.5",
+    "debug": "^4.4.3",
     "express": "^5.1.0",
     "inquirer": "^12.10.0",
     "jimp": "^1.6.0",
@@ -44,12 +45,18 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@types/bun": "^1.4.4",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/lodash": "^4.17.20",
     "@types/morgan": "^1.9.10",
     "@types/node": "^24.9.1",
+    "domhandler": "^6.0.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"
-  }
+  },
+  "workspaces": [
+    "shared",
+    "client-v2"
+  ]
 }

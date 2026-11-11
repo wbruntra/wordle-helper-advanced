@@ -30,13 +30,10 @@
       when: lookup('ansible.builtin.fileglob', secrets_bundle) | length > 0
       tags: [secrets]
 
-    - name: 3. Install dependencies (server and client)
+    - name: 3. Install dependencies (one bun workspace: server, shared, client-v2)
       command: bun install --frozen-lockfile
       args:
-        chdir: '{{ item }}'
-      loop:
-        - '{{ project_root }}'
-        - '{{ project_root }}/client'
+        chdir: '{{ project_root }}'
       tags: [deps]
 
     - name: 4. Back up and migrate the database

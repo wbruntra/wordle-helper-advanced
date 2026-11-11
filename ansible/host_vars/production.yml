@@ -3,7 +3,7 @@
 # nginx -> waker (127.0.0.1:8000, ~/sysperf/waker) -> wordle-helper-api (app_port).
 # waker starts and stops the pm2 process on demand, so it may be stopped
 # between deploys; the restart step starts it either way.
-# nginx serves client/dist statically (ansible/files/nginx.wordle.conf).
+# nginx serves client-v2/dist statically (ansible/files/nginx.wordle.conf).
 project_root: /home/william/wordle-helper-advanced
 target_branch: master
 # Must match pm2_name in ~/sysperf/waker/apps.config.ts.

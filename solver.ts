@@ -1,5 +1,4 @@
-import likelyWords from './likely-word-list.json'
-import { getBins, getAnswersMatchingKey } from '@advancedUtils'
+import { LIKELY_WORDS as likelyWords, binSizes, filterByGuess, groupByKey } from '@wordle/shared'
 import { SecondGuessCacheDB } from './database.js'
 import inquirer from 'inquirer'
 
@@ -76,7 +75,7 @@ const preComputeSecondGuess = ({ initialGuess, likelyWords }: PreComputeOptions)
     }
 
     // Filter likelyWords to answers that match this key pattern
-    const filteredAnswers = getAnswersMatchingKey(initialGuess, key, likelyWords)
+    const filteredAnswers = filterByGuess({ word: initialGuess, key: key }, likelyWords)
 
     if (filteredAnswers.length === 0) {
       cache[key] = {
@@ -120,7 +119,7 @@ const preComputeSecondGuess = ({ initialGuess, likelyWords }: PreComputeOptions)
     ]
 
     for (const potentialGuess of candidateOrder) {
-      const bins = getBins(potentialGuess, filteredAnswers, { returnObject: false }) as number[]
+      const bins = binSizes(potentialGuess, filteredAnswers)
       const numBins = bins.length
 
       wordBinCounts.push({
@@ -234,7 +233,7 @@ const findBestGuessSinglePass = (
     if (seenCandidates.has(candidate)) continue
     seenCandidates.add(candidate)
 
-    const bins = getBins(candidate, remainingWords, { returnObject: false }) as number[]
+    const bins = binSizes(candidate, remainingWords)
     const numBins = bins.length
     const variance = calculateVariance(bins)
 
@@ -295,11 +294,7 @@ const getAllKeys = (): string[] => {
 const getPossibleKeys = (initialGuess: string, candidates: string[]): string[] => {
   const keys = new Set<string>()
   for (const candidate of candidates) {
-    const bins = getBins(initialGuess, [candidate], { returnObject: true }) as Record<
-      string,
-      string[]
-    >
-    Object.keys(bins).forEach((key) => keys.add(key))
+    groupByKey(initialGuess, [candidate]).forEach((_words, key) => keys.add(key))
   }
   return Array.from(keys).sort()
 }
@@ -484,7 +479,7 @@ const calculateSingleEvaluation = async (
   }
 
   // Filter to words that match this evaluation
-  const filteredAnswers = getAnswersMatchingKey(initialGuess, evaluation, likelyWords)
+  const filteredAnswers = filterByGuess({ word: initialGuess, key: evaluation }, likelyWords)
 
   if (filteredAnswers.length === 0) {
     return {
@@ -529,14 +524,9 @@ const calculateSingleEvaluation = async (
   // STEP 1: Test remaining words for perfect separation
   for (const candidate of filteredAnswers) {
     try {
-      const bins = getBins(candidate, filteredAnswers, { returnObject: true }) as Record<
-        string,
-        number | string[]
-      >
-      const numBins = Object.keys(bins).length
-      const distribution = calculateVariance(
-        Object.values(bins).map((v) => (typeof v === 'number' ? v : v.length)),
-      ) // bins values are already counts
+      const bins = groupByKey(candidate, filteredAnswers)
+      const numBins = bins.size
+      const distribution = calculateVariance([...bins.values()].map((words) => words.length))
 
       // Perfect separation: each remaining word goes to its own bin
       if (numBins === filteredAnswers.length) {
@@ -601,14 +591,9 @@ const calculateSingleEvaluation = async (
       }
 
       try {
-        const bins = getBins(candidate, filteredAnswers, { returnObject: true }) as Record<
-          string,
-          number | string[]
-        >
-        const numBins = Object.keys(bins).length
-        const distribution = calculateVariance(
-          Object.values(bins).map((v) => (typeof v === 'number' ? v : v.length)),
-        ) // bins values are already counts
+        const bins = groupByKey(candidate, filteredAnswers)
+        const numBins = bins.size
+        const distribution = calculateVariance([...bins.values()].map((words) => words.length))
 
         // Check if this achieves perfect separation
         if (numBins === filteredAnswers.length) {
@@ -744,7 +729,7 @@ const buildCacheIncremental = async (initialGuess: string): Promise<void> => {
     }
 
     // Filter likelyWords to answers that match this key pattern
-    const filteredAnswers = getAnswersMatchingKey(initialGuess, key, likelyWords)
+    const filteredAnswers = filterByGuess({ word: initialGuess, key: key }, likelyWords)
 
     if (filteredAnswers.length === 0) {
       newCacheEntries[key] = {
@@ -779,7 +764,7 @@ const buildCacheIncremental = async (initialGuess: string): Promise<void> => {
     let foundPerfectSeparation = false
 
     for (const potentialGuess of likelyWords) {
-      const bins = getBins(potentialGuess, filteredAnswers, { returnObject: false }) as number[]
+      const bins = binSizes(potentialGuess, filteredAnswers)
       const numBins = bins.length
 
       wordBinCounts.push({

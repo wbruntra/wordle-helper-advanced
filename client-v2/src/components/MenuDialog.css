@@ -1,0 +1,5 @@
+.menu-answer { margin-left: 6px; letter-spacing: 0.1em; }
+.menu-links { display: grid; gap: 8px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+.menu-links + * { margin-top: 0; }
+.modal-body > .btn { margin-top: 8px; }
+.modal-body a.btn { text-decoration: none; }

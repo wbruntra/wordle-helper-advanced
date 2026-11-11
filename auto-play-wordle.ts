@@ -1,5 +1,4 @@
-import likelyWords from './likely-word-list.json'
-import { getBins, getAnswersMatchingKey, evaluateToString } from '@advancedUtils'
+import { LIKELY_WORDS as likelyWords, binSizes, evaluate as evaluateToString, filterByGuess } from '@wordle/shared'
 import { getOptimalGuess, findBestGuessSinglePass } from './solver.ts'
 
 // Type definitions
@@ -142,7 +141,7 @@ const chooseBestGuessFromRemaining = async (
 
   // Test each remaining word to see which one creates the most bins
   for (const candidate of remainingWords) {
-    const bins = getBins(candidate, remainingWords, { returnObject: false }) as number[]
+    const bins = binSizes(candidate, remainingWords)
     const numBins = bins.length
 
     if (numBins > maxBins) {
@@ -212,7 +211,7 @@ const autoPlayWordle = async (answer: string, initialGuess: string = 'CRATE', op
   }
 
   // Filter after first guess
-  gameState.remainingWords = getAnswersMatchingKey(initialGuess, firstEvaluation, gameState.remainingWords)
+  gameState.remainingWords = filterByGuess({ word: initialGuess, key: firstEvaluation }, gameState.remainingWords)
   if (!silent) console.log(`   Remaining: ${gameState.remainingWords.length} words`)
   
   gameState.steps?.push({
@@ -268,7 +267,7 @@ const autoPlayWordle = async (answer: string, initialGuess: string = 'CRATE', op
   }
 
   // Filter after second guess
-  gameState.remainingWords = getAnswersMatchingKey(secondGuess, secondEvaluation, gameState.remainingWords)
+  gameState.remainingWords = filterByGuess({ word: secondGuess, key: secondEvaluation }, gameState.remainingWords)
   if (!silent) console.log(`   Remaining: ${gameState.remainingWords.length} words`)
   
   gameState.steps?.push({
@@ -332,7 +331,7 @@ const autoPlayWordle = async (answer: string, initialGuess: string = 'CRATE', op
     }
 
     // Filter for next iteration
-    gameState.remainingWords = getAnswersMatchingKey(currentGuess, currentEvaluation, gameState.remainingWords)
+    gameState.remainingWords = filterByGuess({ word: currentGuess, key: currentEvaluation }, gameState.remainingWords)
     if (!silent) console.log(`   Remaining: ${gameState.remainingWords.length} words`)
     
     gameState.steps?.push({

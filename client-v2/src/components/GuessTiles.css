@@ -1,0 +1,2 @@
+.guess-tiles { display: inline-flex; gap: 3px; }
+.guess-tiles .tile { width: var(--size); height: var(--size); font-size: calc(var(--size) * 0.5); border-width: 0; }

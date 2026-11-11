@@ -4,32 +4,22 @@ import path from 'path'
 import s3 from '../bunS3'
 import config from '../config'
 import { getGuessesFromImage } from '../getGuessesFromImage'
+import type {
+  ApiError,
+  InterpretGuessesRequest,
+  InterpretGuessesResponse,
+  PresignedUrlRequest,
+  PresignedUrlResponse,
+} from '@wordle/shared'
 
 const router = express.Router()
-
-// Type definitions for API requests/responses
-interface PresignedUrlRequest {
-  fileName: string
-  fileType: string
-}
-
-interface PresignedUrlResponse {
-  presignedUrl: string
-  fileUrl: string
-}
-
-interface InterpretGuessesRequest {
-  fileUrl: string
-  board: string[][]
-  gameType?: string
-}
 
 // Generate presigned URL route
 router.post(
   '/api/get-presigned-url',
   async (
     req: Request<{}, PresignedUrlResponse, PresignedUrlRequest>,
-    res: Response<PresignedUrlResponse>,
+    res: Response<PresignedUrlResponse | ApiError>,
   ) => {
     try {
       const { fileName, fileType } = req.body
@@ -59,7 +49,7 @@ router.post(
       })
     } catch (error) {
       console.error('Error generating presigned URL:', error)
-      res.status(500).json({ error: 'Failed to generate presigned URL' } as any)
+      res.status(500).json({ error: 'Failed to generate presigned URL' })
     }
   },
 )
@@ -67,9 +57,12 @@ router.post(
 // Interpret guesses route
 router.post(
   '/api/interpret-guesses',
-  async (req: Request<{}, any, InterpretGuessesRequest>, res: Response) => {
+  async (
+    req: Request<{}, InterpretGuessesResponse | ApiError, InterpretGuessesRequest>,
+    res: Response<InterpretGuessesResponse | ApiError>,
+  ) => {
     try {
-      const { fileUrl, board, gameType = 'wordle' } = req.body
+      const { fileUrl } = req.body
 
       // Validate fileUrl parameter
       if (!fileUrl || typeof fileUrl !== 'string') {
