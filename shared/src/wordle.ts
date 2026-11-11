@@ -6,7 +6,9 @@
  * character per letter. All words are expected to be uppercase.
  */
 
-export const WORD_LENGTH = 5
+import { PATTERN_COUNT, packWords, patternIndex } from './patterns'
+
+export { WORD_LENGTH } from './constants'
 
 export type Mark = 'G' | 'Y' | '-'
 
@@ -87,12 +89,11 @@ export function groupByKey(guess: string, words: string[]): Map<string, string[]
 
 /** Size of each group `guess` splits `words` into, largest first. */
 export function binSizes(guess: string, words: string[]): number[] {
-  const counts = new Map<string, number>()
-  for (const answer of words) {
-    const key = evaluate(guess, answer)
-    counts.set(key, (counts.get(key) ?? 0) + 1)
-  }
-  return [...counts.values()].sort((a, b) => b - a)
+  const guesses = packWords([guess])
+  const answers = packWords(words)
+  const counts = new Uint32Array(PATTERN_COUNT)
+  for (let a = 0; a < words.length; a++) counts[patternIndex(guesses, 0, answers, a)]++
+  return [...counts].filter((count) => count > 0).sort((a, b) => b - a)
 }
 
 export type LetterState = 'G' | 'Y' | '-'

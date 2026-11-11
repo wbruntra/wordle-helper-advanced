@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'preact/hooks'
 import { useJob } from '../hooks/useAsyncResource'
 import { rankInWorker } from '../lib/compute'
-import type { RankedWord } from '../lib/ranking'
+import type { Ranking } from '../lib/ranking'
 import { applyGuesses, filterByGuess, type Guess, LIKELY_WORDS as WORDS } from '@wordle/shared'
 import { GuessTiles } from './GuessTiles'
 import { Modal } from './ui/Modal'
 import './RemainingDialog.css'
 
-const RANK_LIMIT = 1500
+const RANK_LIMIT = 3000
 const SHOW_LIMIT = 60
 const ELIMINATED_SHOW_LIMIT = 120
 
@@ -55,8 +55,8 @@ function RemainingTab({ remaining, guessCount }: { remaining: string[]; guessCou
   const canRank = guessCount > 0 && remaining.length > 1 && remaining.length < RANK_LIMIT
   const remainingSet = useMemo(() => new Set(remaining), [remaining])
 
-  const ranked = useJob<RankedWord[]>(
-    (resolve, reject) => rankInWorker(remaining, WORDS, anyWord, resolve, reject),
+  const ranked = useJob<Ranking>(
+    (resolve, reject) => rankInWorker(remaining, WORDS, anyWord, SHOW_LIMIT, resolve, reject),
     [remaining, anyWord],
     canRank,
   )
@@ -107,7 +107,7 @@ function RemainingTab({ remaining, guessCount }: { remaining: string[]; guessCou
               </tr>
             </thead>
             <tbody>
-              {ranked.value.slice(0, SHOW_LIMIT).map(({ word, patterns }) => (
+              {ranked.value.top.map(({ word, patterns }) => (
                 <tr key={word}>
                   <td>
                     <code>{word}</code>
@@ -118,7 +118,7 @@ function RemainingTab({ remaining, guessCount }: { remaining: string[]; guessCou
               ))}
             </tbody>
           </table>
-          {ranked.value.length > SHOW_LIMIT && (
+          {ranked.value.candidates > SHOW_LIMIT && (
             <p class="field-hint">Showing the top {SHOW_LIMIT}.</p>
           )}
         </>

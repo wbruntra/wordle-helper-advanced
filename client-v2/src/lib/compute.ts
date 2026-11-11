@@ -1,6 +1,6 @@
 import type { ComputeRequest, ComputeResult } from '../workers/compute.worker'
 import type { TurnAnalysis } from './analysis'
-import type { RankedWord } from './ranking'
+import type { Ranking } from './ranking'
 import type { Guess } from '@wordle/shared'
 
 /**
@@ -34,16 +34,17 @@ function start(
   return () => void listeners.delete(id)
 }
 
-/** Rank guesses off-thread. Returns a cancel function. */
+/** Rank the best `limit` guesses off-thread. Returns a cancel function. */
 export function rankInWorker(
   remaining: string[],
   allWords: string[],
   includeAllWords: boolean,
-  onDone: (ranked: RankedWord[]) => void,
+  limit: number,
+  onDone: (ranking: Ranking) => void,
   onError: (message: string) => void,
 ) {
-  return start({ type: 'rank', remaining, allWords, includeAllWords }, (result) => {
-    if (result.type === 'rank') onDone(result.ranked)
+  return start({ type: 'rank', remaining, allWords, includeAllWords, limit }, (result) => {
+    if (result.type === 'rank') onDone(result.ranking)
     else if (result.type === 'error') onError(result.message)
   })
 }
