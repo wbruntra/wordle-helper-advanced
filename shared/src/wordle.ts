@@ -19,7 +19,8 @@ export interface Guess {
 export const normalizeWord = (word: string): string => word.trim().toUpperCase()
 
 /** Uppercase a key and turn anything that isn't G or Y into a dash. */
-export const normalizeKey = (key: string): string => key.trim().toUpperCase().replace(/[^GY]/g, '-')
+export const normalizeKey = (key: string): string =>
+  key.trim().toUpperCase().replace(/[^GY]/g, '-')
 
 export const isValidWord = (word: string): boolean => /^[A-Z]{5}$/.test(word)
 

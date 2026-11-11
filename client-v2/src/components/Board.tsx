@@ -2,7 +2,8 @@ import { MAX_GUESSES } from '../state/daily'
 import { WORD_LENGTH, type Guess } from '@wordle/shared'
 import './Board.css'
 
-const stateOf = (mark: string | undefined) => (mark === 'G' ? 'correct' : mark === 'Y' ? 'present' : 'absent')
+const stateOf = (mark: string | undefined) =>
+  mark === 'G' ? 'correct' : mark === 'Y' ? 'present' : 'absent'
 
 interface BoardProps {
   guesses: Guess[]
@@ -18,7 +19,15 @@ interface BoardProps {
   hideDraft?: boolean
 }
 
-export function Board({ guesses, draft, draftKey, onTileClick, onRowClick, animateRow, hideDraft }: BoardProps) {
+export function Board({
+  guesses,
+  draft,
+  draftKey,
+  onTileClick,
+  onRowClick,
+  animateRow,
+  hideDraft,
+}: BoardProps) {
   const rows = Array.from({ length: MAX_GUESSES }, (_unused, index) => index)
 
   return (
@@ -36,11 +45,18 @@ export function Board({ guesses, draft, draftKey, onTileClick, onRowClick, anima
             </div>
           ))
           return onRowClick ? (
-            <button key={row} class="board-row board-row-button" onClick={() => onRowClick(row)} aria-label={`Guess ${row + 1}: ${guess.word}. Show breakdown`}>
+            <button
+              key={row}
+              class="board-row board-row-button"
+              onClick={() => onRowClick(row)}
+              aria-label={`Guess ${row + 1}: ${guess.word}. Show breakdown`}
+            >
               {tiles}
             </button>
           ) : (
-            <div key={row} class="board-row" role="row">{tiles}</div>
+            <div key={row} class="board-row" role="row">
+              {tiles}
+            </div>
           )
         }
 
@@ -54,11 +70,18 @@ export function Board({ guesses, draft, draftKey, onTileClick, onRowClick, anima
               const interactive = Boolean(letter && onTileClick)
               const className = `tile tile-${state}${letter ? ' tile-pop' : ''}${interactive ? ' tile-tappable' : ''}`
               return interactive ? (
-                <button key={i} class={className} onClick={() => onTileClick?.(i)} aria-label={`${letter}, tap to change colour`}>
+                <button
+                  key={i}
+                  class={className}
+                  onClick={() => onTileClick?.(i)}
+                  aria-label={`${letter}, tap to change colour`}
+                >
                   {letter}
                 </button>
               ) : (
-                <div key={i} class={className} role="gridcell">{letter}</div>
+                <div key={i} class={className} role="gridcell">
+                  {letter}
+                </div>
               )
             })}
           </div>

@@ -40,35 +40,54 @@ function parseOr400<T extends z.ZodType>(schema: T, data: unknown, res: Response
   return null
 }
 
-router.get('/api/answers', async (req: Request, res: Response<RecentAnswersResponse | ApiError>) => {
-  const query = parseOr400(recentAnswersQuery, req.query, res)
-  if (!query) return
+router.get(
+  '/api/answers',
+  async (req: Request, res: Response<RecentAnswersResponse | ApiError>) => {
+    const query = parseOr400(recentAnswersQuery, req.query, res)
+    if (!query) return
 
-  const rows = await db('answer_history').select('date', 'word').orderBy('date', 'desc').limit(query.limit)
-  res.json({ answers: rows.map((row: { date: string; word: string }) => ({ date: row.date, word: row.word.toUpperCase() })) })
-})
+    const rows = await db('answer_history')
+      .select('date', 'word')
+      .orderBy('date', 'desc')
+      .limit(query.limit)
+    res.json({
+      answers: rows.map((row: { date: string; word: string }) => ({
+        date: row.date,
+        word: row.word.toUpperCase(),
+      })),
+    })
+  },
+)
 
-router.post('/api/best-guess', async (req: Request, res: Response<BestGuessResponse | ApiError>) => {
-  const body = parseOr400(bestGuessBody, req.body, res)
-  if (!body) return
+router.post(
+  '/api/best-guess',
+  async (req: Request, res: Response<BestGuessResponse | ApiError>) => {
+    const body = parseOr400(bestGuessBody, req.body, res)
+    if (!body) return
 
-  const { history } = body
-  const remaining = applyGuesses(LIKELY_WORDS, history)
-  if (remaining.length === 0) {
-    res.status(422).json({ error: 'No matching words for the given history' })
-    return
-  }
+    const { history } = body
+    const remaining = applyGuesses(LIKELY_WORDS, history)
+    if (remaining.length === 0) {
+      res.status(422).json({ error: 'No matching words for the given history' })
+      return
+    }
 
-  const previous = history.at(-1)
-  const best = await chooseBestGuessFromRemaining(remaining, history.length + 1, LIKELY_WORDS, {
-    previousGuess: previous?.word,
-    previousEvaluation: previous?.key,
-    generateFullCache: false,
-    silent: true,
-  })
+    const previous = history.at(-1)
+    const best = await chooseBestGuessFromRemaining(remaining, history.length + 1, LIKELY_WORDS, {
+      previousGuess: previous?.word,
+      previousEvaluation: previous?.key,
+      generateFullCache: false,
+      silent: true,
+    })
 
-  res.json({ bestGuess: best.word, remainingCount: remaining.length, bins: best.bins, reason: best.reason })
-})
+    res.json({
+      bestGuess: best.word,
+      remainingCount: remaining.length,
+      bins: best.bins,
+      reason: best.reason,
+    })
+  },
+)
 
 router.post('/api/auto-play', async (req: Request, res: Response<AutoPlayResponse | ApiError>) => {
   const body = parseOr400(autoPlayBody, req.body, res)

@@ -67,7 +67,9 @@ router.post(
       // Validate fileUrl parameter
       if (!fileUrl || typeof fileUrl !== 'string') {
         console.error('Invalid or missing fileUrl:', fileUrl)
-        return res.status(400).json({ error: 'fileUrl is required and must be a valid URL string' })
+        return res
+          .status(400)
+          .json({ error: 'fileUrl is required and must be a valid URL string' })
       }
 
       // Call the getGuessesFromImage function with proper typing

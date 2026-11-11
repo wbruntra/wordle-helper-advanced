@@ -8,12 +8,15 @@ export const customWord = signal('')
 export const customKey = signal('-----')
 
 export function typeCustomLetter(letter: string) {
-  if (customWord.value.length < WORD_LENGTH && customGuesses.value.length < MAX_GUESSES) customWord.value += letter
+  if (customWord.value.length < WORD_LENGTH && customGuesses.value.length < MAX_GUESSES)
+    customWord.value += letter
 }
 
 export function customBackspace() {
   if (customWord.value) {
-    customKey.value = customKey.value.slice(0, customWord.value.length - 1).padEnd(WORD_LENGTH, '-')
+    customKey.value = customKey.value
+      .slice(0, customWord.value.length - 1)
+      .padEnd(WORD_LENGTH, '-')
     customWord.value = customWord.value.slice(0, -1)
   } else {
     removeLastCustomGuess()

@@ -41,7 +41,10 @@ describe('filtering', () => {
 
   test('filterByGuess keeps words that give the same colours', () => {
     expect(filterByGuess({ word: 'STORK', key: 'GGGGG' }, words)).toEqual(['STORK'])
-    expect(filterByGuess({ word: 'STORK', key: 'GGGG-' }, words).sort()).toEqual(['STORE', 'STORM'])
+    expect(filterByGuess({ word: 'STORK', key: 'GGGG-' }, words).sort()).toEqual([
+      'STORE',
+      'STORM',
+    ])
     expect(filterByGuess({ word: 'STORK', key: '-----' }, words)).toEqual([])
   })
 

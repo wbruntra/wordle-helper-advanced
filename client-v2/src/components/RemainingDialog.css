@@ -1,16 +1,66 @@
-.tab-lede { margin-bottom: 12px; }
-.rank-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-.rank-table th { text-align: left; font-size: 0.75rem; color: var(--text-muted); padding: 4px 0; }
-.rank-table th:last-child, .rank-table td:last-child { text-align: right; }
-.rank-table td { padding: 8px 0; border-top: 1px solid var(--border); }
-.rank-table code { font-size: 1rem; letter-spacing: 0.08em; }
-.helper { margin-left: 8px; }
+.tab-lede {
+  margin-bottom: 12px;
+}
+.rank-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+.rank-table th {
+  text-align: left;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding: 4px 0;
+}
+.rank-table th:last-child,
+.rank-table td:last-child {
+  text-align: right;
+}
+.rank-table td {
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+.rank-table code {
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+}
+.helper {
+  margin-left: 8px;
+}
 
-.word-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-.word-chips code { background: var(--surface); padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; }
+.word-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.word-chips code {
+  background: var(--surface);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
 
-.eliminated { display: grid; gap: 8px; }
-.eliminated details { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; }
-.eliminated summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; list-style-position: inside; }
-.rank-table { transition: opacity 0.15s; }
-.rank-table-stale { opacity: 0.45; }
+.eliminated {
+  display: grid;
+  gap: 8px;
+}
+.eliminated details {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+}
+.eliminated summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  list-style-position: inside;
+}
+.rank-table {
+  transition: opacity 0.15s;
+}
+.rank-table-stale {
+  opacity: 0.45;
+}

@@ -36,14 +36,20 @@ export const api = {
   recentAnswers: (limit: number) => request<RecentAnswersResponse>(`/answers?limit=${limit}`),
 
   /** The solver's best next guess after the guesses in `history`. */
-  bestGuess: (history: Guess[]) => post<BestGuessResponse>('/best-guess', { history } satisfies BestGuessRequest),
+  bestGuess: (history: Guess[]) =>
+    post<BestGuessResponse>('/best-guess', { history } satisfies BestGuessRequest),
 
   autoPlay: (answer: string, startingWord?: string) =>
     post<AutoPlayResponse>('/auto-play', { answer, startingWord } satisfies AutoPlayRequest),
 
   presignedUrl: (file: { name: string; type: string }) =>
-    post<PresignedUrlResponse>('/get-presigned-url', { fileName: file.name, fileType: file.type } satisfies PresignedUrlRequest),
+    post<PresignedUrlResponse>('/get-presigned-url', {
+      fileName: file.name,
+      fileType: file.type,
+    } satisfies PresignedUrlRequest),
 
   interpretGuesses: (fileUrl: string) =>
-    post<InterpretGuessesResponse>('/interpret-guesses', { fileUrl } satisfies InterpretGuessesRequest),
+    post<InterpretGuessesResponse>('/interpret-guesses', {
+      fileUrl,
+    } satisfies InterpretGuessesRequest),
 }

@@ -1,7 +1,10 @@
 const db = require('./db_connect')
 
 async function exploreData() {
-  let firstGuesses = await db('first_guesses').select(['guess', 'bin_count', 'stddev']).orderBy('stddev', 'asc').limit(10)
+  let firstGuesses = await db('first_guesses')
+    .select(['guess', 'bin_count', 'stddev'])
+    .orderBy('stddev', 'asc')
+    .limit(10)
   console.log('Top 10 First Guesses with Lowest Standard Deviation:')
   // firstGuesses.forEach((guess) => {
   //   console.log(
@@ -15,7 +18,10 @@ async function exploreData() {
   console.table(firstGuesses)
 
   // get data ordered by bin_count descending
-  firstGuesses = await db('first_guesses').select(['guess', 'bin_count', 'stddev']).orderBy('bin_count', 'desc').limit(10)
+  firstGuesses = await db('first_guesses')
+    .select(['guess', 'bin_count', 'stddev'])
+    .orderBy('bin_count', 'desc')
+    .limit(10)
   console.log('Top 10 First Guesses with Highest Bin Count:')
   console.table(firstGuesses)
 }

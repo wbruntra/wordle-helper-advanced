@@ -50,9 +50,17 @@ function sample<T>(items: T[], count: number): T[] {
 }
 
 /** The best-scoring guess among (a sample of) `remaining`. */
-function findBestGuess(remaining: string[]): { word: string; analysis: GuessAnalysis; note: string } {
+function findBestGuess(remaining: string[]): {
+  word: string
+  analysis: GuessAnalysis
+  note: string
+} {
   if (remaining.length === 1) {
-    return { word: remaining[0], analysis: analyzeGuess(remaining[0], remaining), note: 'Only one word remaining' }
+    return {
+      word: remaining[0],
+      analysis: analyzeGuess(remaining[0], remaining),
+      note: 'Only one word remaining',
+    }
   }
 
   const limited = remaining.length > MAX_BEST_CANDIDATES
@@ -86,7 +94,12 @@ export function analyzeTurn(words: string[], guesses: Guess[], index: number): T
   }
 
   const { word, analysis, note } = findBestGuess(remaining)
-  return { remainingBefore: remaining.length, played, best: { word, analysis }, note: note || null }
+  return {
+    remainingBefore: remaining.length,
+    played,
+    best: { word, analysis },
+    note: note || null,
+  }
 }
 
 /** Words grouped by the pattern `guess` produces, largest group first. */

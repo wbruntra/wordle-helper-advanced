@@ -1,9 +1,11 @@
 import { test, expect, describe } from 'bun:test'
-import { LIKELY_WORDS as likelyWords, binSizes, evaluate as evaluateToString, filterByGuess } from '@wordle/shared'
 import {
-  autoPlayWordle,
-  chooseBestGuessFromRemaining,
-} from './auto-play-wordle.js'
+  LIKELY_WORDS as likelyWords,
+  binSizes,
+  evaluate as evaluateToString,
+  filterByGuess,
+} from '@wordle/shared'
+import { autoPlayWordle, chooseBestGuessFromRemaining } from './auto-play-wordle.js'
 
 // ============================================================================
 // CORE GAMEPLAY TESTS

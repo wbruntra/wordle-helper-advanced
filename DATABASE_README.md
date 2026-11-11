@@ -42,6 +42,7 @@ CREATE TABLE answer_history (
 ```
 
 **Columns:**
+
 - `id` - Auto-incrementing primary key
 - `date` - Date of the Wordle (YYYY-MM-DD format), unique constraint ensures one answer per day
 - `word` - The 5-letter answer (uppercase)
@@ -49,6 +50,7 @@ CREATE TABLE answer_history (
 - `updated_at` - Timestamp when record was last updated
 
 **Indexes:**
+
 - Primary key on `id`
 - Unique constraint on `date` (prevents duplicate dates, enables efficient skipping)
 
@@ -210,29 +212,25 @@ npx knex migrate:rollback
 
 ## Performance Characteristics
 
-| Scenario | Time | Operations |
-|----------|------|-----------|
-| First run (1,595 new) | ~3s | Check DB + Parse HTML + Insert 1595 |
-| Daily run (1 new) | ~0.5s | Check DB + Parse HTML + Insert 1 |
-| Daily run (no new) | ~0.5s | Check DB + Parse HTML + Skip |
+| Scenario              | Time  | Operations                          |
+| --------------------- | ----- | ----------------------------------- |
+| First run (1,595 new) | ~3s   | Check DB + Parse HTML + Insert 1595 |
+| Daily run (1 new)     | ~0.5s | Check DB + Parse HTML + Insert 1    |
+| Daily run (no new)    | ~0.5s | Check DB + Parse HTML + Skip        |
 
 ## Database Queries
 
 ### Get Today's Answer
 
 ```javascript
-const answer = await knex('answer_history')
-  .where('date', '2025-10-31')
-  .first()
+const answer = await knex('answer_history').where('date', '2025-10-31').first()
 // { id: 1595, date: '2025-10-31', word: 'ABHOR', ... }
 ```
 
 ### Get Last 7 Days
 
 ```javascript
-const week = await knex('answer_history')
-  .orderBy('date', 'desc')
-  .limit(7)
+const week = await knex('answer_history').orderBy('date', 'desc').limit(7)
 // [ { date: '2025-10-31', word: 'ABHOR' }, { date: '2025-10-30', word: 'LATHE' }, ... ]
 ```
 
@@ -247,9 +245,7 @@ const answers = await knex('answer_history')
 ### Get Total Count
 
 ```javascript
-const count = await knex('answer_history')
-  .count('* as total')
-  .first()
+const count = await knex('answer_history').count('* as total').first()
 // { total: 1595 }
 ```
 
@@ -258,36 +254,30 @@ const count = await knex('answer_history')
 ### Express.js Example
 
 ```javascript
-const knex = require('knex');
-const knexConfig = require('./knexfile');
-const db = knex(knexConfig.development);
+const knex = require('knex')
+const knexConfig = require('./knexfile')
+const db = knex(knexConfig.development)
 
 // Get today's answer
 app.get('/api/wordle/today', async (req, res) => {
-  const today = new Date().toISOString().split('T')[0];
-  const answer = await db('answer_history')
-    .where('date', today)
-    .first();
-  res.json(answer);
-});
+  const today = new Date().toISOString().split('T')[0]
+  const answer = await db('answer_history').where('date', today).first()
+  res.json(answer)
+})
 
 // Get last N days
 app.get('/api/wordle/history/:days', async (req, res) => {
-  const days = Math.min(parseInt(req.params.days), 365);
-  const answers = await db('answer_history')
-    .orderBy('date', 'desc')
-    .limit(days);
-  res.json(answers.reverse());
-});
+  const days = Math.min(parseInt(req.params.days), 365)
+  const answers = await db('answer_history').orderBy('date', 'desc').limit(days)
+  res.json(answers.reverse())
+})
 
 // Get specific date
 app.get('/api/wordle/date/:date', async (req, res) => {
-  const answer = await db('answer_history')
-    .where('date', req.params.date)
-    .first();
-  if (!answer) return res.status(404).json({ error: 'Not found' });
-  res.json(answer);
-});
+  const answer = await db('answer_history').where('date', req.params.date).first()
+  if (!answer) return res.status(404).json({ error: 'Not found' })
+  res.json(answer)
+})
 ```
 
 ## Troubleshooting
@@ -316,14 +306,14 @@ app.get('/api/wordle/date/:date', async (req, res) => {
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `parseAnswers.ts` | TypeScript HTML parser (updated for DB) |
-| `update-wordle-answers.sh` | Bash cron orchestration script |
-| `knexfile.js` | Knex database configuration |
-| `migrations/20251031110821_create_answer_history.js` | Database schema migration |
-| `wordle.sqlite3` | SQLite database file |
-| `update-wordle-answers.log` | Execution log file |
+| File                                                 | Purpose                                 |
+| ---------------------------------------------------- | --------------------------------------- |
+| `parseAnswers.ts`                                    | TypeScript HTML parser (updated for DB) |
+| `update-wordle-answers.sh`                           | Bash cron orchestration script          |
+| `knexfile.js`                                        | Knex database configuration             |
+| `migrations/20251031110821_create_answer_history.js` | Database schema migration               |
+| `wordle.sqlite3`                                     | SQLite database file                    |
+| `update-wordle-answers.log`                          | Execution log file                      |
 
 ## Key Improvements Over JSON
 
@@ -340,24 +330,24 @@ If you had the old `answer-history.json`, you can migrate to the database:
 
 ```javascript
 // One-time migration script
-const fs = require('fs');
-const knex = require('knex');
-const knexConfig = require('./knexfile');
+const fs = require('fs')
+const knex = require('knex')
+const knexConfig = require('./knexfile')
 
 async function migrateFromJson() {
-  const db = knex(knexConfig.development);
-  const json = JSON.parse(fs.readFileSync('answer-history.json', 'utf-8'));
-  
-  const batchSize = 100;
+  const db = knex(knexConfig.development)
+  const json = JSON.parse(fs.readFileSync('answer-history.json', 'utf-8'))
+
+  const batchSize = 100
   for (let i = 0; i < json.length; i += batchSize) {
-    await db('answer_history').insert(json.slice(i, i + batchSize));
+    await db('answer_history').insert(json.slice(i, i + batchSize))
   }
-  
-  await db.destroy();
-  console.log(`Migrated ${json.length} answers to database`);
+
+  await db.destroy()
+  console.log(`Migrated ${json.length} answers to database`)
 }
 
-migrateFromJson();
+migrateFromJson()
 ```
 
 ---

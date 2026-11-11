@@ -5,6 +5,7 @@ This document explains how to set up the automated daily Wordle answers update u
 ## Overview
 
 The `update-wordle-answers.sh` bash script automates the entire workflow:
+
 1. Downloads the latest Wordle answers HTML from wordfinder.yourdictionary.com
 2. Parses the HTML using the TypeScript `parseAnswers.ts` script
 3. Generates/updates `answer-history.json` with all available answers
@@ -24,6 +25,7 @@ The `update-wordle-answers.sh` bash script automates the entire workflow:
 - **bash** - Shell interpreter (standard)
 
 Verify prerequisites:
+
 ```bash
 which bun      # Should show bun executable path
 which curl     # Should show curl executable path
@@ -39,6 +41,7 @@ cd /path/to/wordle-helper
 ```
 
 Example output:
+
 ```
 [2025-10-31 14:30:45] Starting Wordle answers update...
 [2025-10-31 14:30:45] Downloading Wordle answers page from https://wordfinder.yourdictionary.com/wordle/answers/...
@@ -57,6 +60,7 @@ Found 1595 Wordle answers:
 To schedule this script to run daily, add a cron job:
 
 ### 1. Open crontab editor:
+
 ```bash
 crontab -e
 ```
@@ -64,19 +68,22 @@ crontab -e
 ### 2. Add one of these lines (choose your preferred time):
 
 **Run at 5:00 AM daily** (recommended - after midnight, before most activity):
+
 ```cron
 0 5 * * * cd /home/william/wordle-helper-advanced && ./update-wordle-answers.ts
 ```
 
 **Run at 12:05 AM daily** (just after midnight):
-```cron
+
+````cron
 5 0 * * * cd /home/william/wordle-helper-advanced && ./update-wordle-answers.ts
 ```cron
 5 0 * * * cd /home/william/wordle-helper-advanced && ./update-wordle-answers.sh
-```
+````
 
 **Run every 6 hours** (backup approach):
-```cron
+
+````cron
 0 */6 * * * cd /home/william/wordle-helper-advanced && ./update-wordle-answers.ts
 ```cron
 0 */6 * * * cd /home/william/wordle-helper-advanced && ./update-wordle-answers.sh
@@ -88,15 +95,17 @@ Example with real path:
 0 5 * * * cd /home/william/wordle-helper-advanced && ./update-wordle-answers.sh
 ```cron
 0 5 * * * cd /home/william/workspace/personal/wordle-helper && ./update-wordle-answers.sh
-```
+````
 
 ### 4. Save and exit
 
 For most editors (nano, vim):
+
 - **nano**: Press `Ctrl+X`, then `Y`, then `Enter`
 - **vim**: Press `Esc`, type `:wq`, press `Enter`
 
 ### 5. Verify cron job was added:
+
 ```bash
 crontab -l
 ```
@@ -104,16 +113,19 @@ crontab -l
 ## Monitoring
 
 ### Check logs:
+
 ```bash
 tail -f /path/to/wordle-helper/update-wordle-answers.log
 ```
 
 ### Check if the script ran:
+
 ```bash
 grep "2025-10-31" /path/to/wordle-helper/update-wordle-answers.log
 ```
 
 ### View recent 20 lines:
+
 ```bash
 tail -20 /path/to/wordle-helper/update-wordle-answers.log
 ```
@@ -149,23 +161,26 @@ tail -20 /path/to/wordle-helper/update-wordle-answers.log
 Once the cron job is running, your backend can:
 
 1. **Read the answers file**:
+
 ```javascript
-const answers = JSON.parse(fs.readFileSync('answer-history.json', 'utf-8'));
+const answers = JSON.parse(fs.readFileSync('answer-history.json', 'utf-8'))
 ```
 
 2. **Get recent answers** (last 7 days):
+
 ```javascript
-const now = new Date();
-const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-const recent = answers.filter(a => new Date(a.date) >= sevenDaysAgo);
+const now = new Date()
+const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+const recent = answers.filter((a) => new Date(a.date) >= sevenDaysAgo)
 ```
 
 3. **Serve via API**:
+
 ```javascript
 app.get('/api/wordle/history', (req, res) => {
-  const answers = JSON.parse(fs.readFileSync('answer-history.json', 'utf-8'));
-  res.json(answers.slice(0, 7)); // Last 7 answers
-});
+  const answers = JSON.parse(fs.readFileSync('answer-history.json', 'utf-8'))
+  res.json(answers.slice(0, 7)) // Last 7 answers
+})
 ```
 
 ## Troubleshooting
@@ -176,6 +191,7 @@ app.get('/api/wordle/history', (req, res) => {
    - Cron jobs have limited PATH
    - Add full path to bun: `which bun`
    - Update crontab to use full path:
+
    ```cron
    0 2 * * * cd /path/to/wordle-helper && /usr/local/bin/bun parseAnswers.ts temp_answers.html
    ```
@@ -192,6 +208,7 @@ app.get('/api/wordle/history', (req, res) => {
 ### Download fails
 
 1. **Check internet connectivity**:
+
    ```bash
    curl -I https://wordfinder.yourdictionary.com/wordle/answers/
    ```
@@ -202,6 +219,7 @@ app.get('/api/wordle/history', (req, res) => {
 ### Parse errors
 
 1. **Check HTML structure**:
+
    ```bash
    grep -c "<table>" temp_answers.html
    ```
@@ -221,6 +239,7 @@ SCRIPT_DIR="${SCRIPT_DIR:-.}"
 ```
 
 Then run with custom variables:
+
 ```bash
 WORDLE_URL="https://custom-url.com/answers" ./update-wordle-answers.sh
 ```

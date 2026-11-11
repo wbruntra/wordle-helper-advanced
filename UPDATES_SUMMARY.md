@@ -5,10 +5,12 @@
 ### 1. TypeScript Script Improvements (`parseAnswers.ts`)
 
 **Before:**
+
 - Only read from hardcoded `debug/answers.html`
 - Wrote all answers to `answer-history.json` file
 
 **After:**
+
 - ✅ Accepts HTML file path as command-line argument
 - ✅ Falls back to default path if no argument provided
 - ✅ Writes directly to SQLite database (`wordle.sqlite3`)
@@ -20,11 +22,13 @@
 ### 2. Database Integration
 
 **Created Migration:**
+
 - `migrations/20251031110821_create_answer_history.js`
 - Table schema: `id`, `date` (unique), `word`, `created_at`, `updated_at`
 - One Wordle answer per day, efficiently queryable
 
 **Database Features:**
+
 - SQLite3 with Knex ORM
 - Unique constraint on date prevents duplicates
 - Batch operations avoid SQLite limits
@@ -34,6 +38,7 @@
 ### 3. Bash Script (`update-wordle-answers.sh`)
 
 **Features:**
+
 - Downloads HTML using curl
 - Calls TypeScript parser with temp file path
 - Automatic cleanup of temporary HTML
@@ -43,6 +48,7 @@
 - Ready for cron job scheduling
 
 **Usage:**
+
 ```bash
 ./update-wordle-answers.sh
 ```
@@ -50,12 +56,14 @@
 ### 4. Cron Job Setup
 
 **Simple Integration:**
+
 ```bash
 crontab -e
 # Add: 0 2 * * * cd /path/to/wordle-helper && ./update-wordle-answers.sh
 ```
 
 Runs daily at 2:00 AM, automatically:
+
 - Downloads latest answers HTML
 - Parses answers
 - Inserts only new entries to database
@@ -63,12 +71,12 @@ Runs daily at 2:00 AM, automatically:
 
 ## Performance Improvements
 
-| Scenario | Old | New | Improvement |
-|----------|-----|-----|------------|
-| First full load | ~3s | ~3s | Same (initial) |
-| Daily update | Rewrite 1,595 JSON | Insert 1 record | 1595x faster |
-| Memory usage | Entire file in RAM | Only new records | Much lower |
-| Query time | File parse | SQL query | 100x+ faster |
+| Scenario        | Old                | New              | Improvement    |
+| --------------- | ------------------ | ---------------- | -------------- |
+| First full load | ~3s                | ~3s              | Same (initial) |
+| Daily update    | Rewrite 1,595 JSON | Insert 1 record  | 1595x faster   |
+| Memory usage    | Entire file in RAM | Only new records | Much lower     |
+| Query time      | File parse         | SQL query        | 100x+ faster   |
 
 ## Database Efficiency
 
@@ -98,16 +106,19 @@ wordle-helper/
 ## Setup Steps
 
 1. **Run Migration**
+
    ```bash
    npx knex migrate:latest
    ```
 
 2. **Initial Population**
+
    ```bash
    bun parseAnswers.ts debug/answers.html
    ```
 
 3. **Verify Database**
+
    ```bash
    sqlite3 wordle.sqlite3 "SELECT COUNT(*) FROM answer_history;"
    # Should show: 1595
@@ -122,23 +133,22 @@ wordle-helper/
 ## Query Examples
 
 ### Get Today's Answer
+
 ```javascript
-const today = new Date().toISOString().split('T')[0];
-const answer = await knex('answer_history').where('date', today).first();
+const today = new Date().toISOString().split('T')[0]
+const answer = await knex('answer_history').where('date', today).first()
 ```
 
 ### Get Last 7 Days
+
 ```javascript
-const week = await knex('answer_history')
-  .orderBy('date', 'desc')
-  .limit(7);
+const week = await knex('answer_history').orderBy('date', 'desc').limit(7)
 ```
 
 ### Check if Date Has Answer
+
 ```javascript
-const hasAnswer = await knex('answer_history')
-  .where('date', '2025-10-31')
-  .first();
+const hasAnswer = await knex('answer_history').where('date', '2025-10-31').first()
 ```
 
 ## Backward Compatibility
@@ -152,19 +162,21 @@ rm answer-history.json
 If you need JSON export later, generate it from the database:
 
 ```javascript
-const answers = await knex('answer_history').orderBy('date', 'desc');
-fs.writeFileSync('answer-history.json', JSON.stringify(answers, null, 2));
+const answers = await knex('answer_history').orderBy('date', 'desc')
+fs.writeFileSync('answer-history.json', JSON.stringify(answers, null, 2))
 ```
 
 ## Testing
 
 **Manual Run:**
+
 ```bash
 ./update-wordle-answers.sh
 tail -5 update-wordle-answers.log
 ```
 
 **Database Verification:**
+
 ```bash
 sqlite3 wordle.sqlite3
 > SELECT COUNT(*) FROM answer_history;
@@ -173,6 +185,7 @@ sqlite3 wordle.sqlite3
 ```
 
 **Parse Script Only:**
+
 ```bash
 bun parseAnswers.ts debug/answers.html
 ```
@@ -180,11 +193,13 @@ bun parseAnswers.ts debug/answers.html
 ## Next Steps for Backend
 
 1. Update backend to read from database instead of JSON:
+
    ```javascript
-   const answers = await knex('answer_history').orderBy('date', 'desc').limit(7);
+   const answers = await knex('answer_history').orderBy('date', 'desc').limit(7)
    ```
 
 2. Create API endpoints:
+
    ```javascript
    app.get('/api/wordle/today', ...)
    app.get('/api/wordle/history/:days', ...)

@@ -15,10 +15,15 @@ export const showAnswer = persistedSignal('showAnswer', false)
 
 /** The puzzle being played: the selected date if known, otherwise the latest. */
 export const puzzle = computed<PuzzleAnswer | null>(
-  () => recentAnswers.value.find((p) => p.date === selectedDate.value) ?? recentAnswers.value[0] ?? null,
+  () =>
+    recentAnswers.value.find((p) => p.date === selectedDate.value) ??
+    recentAnswers.value[0] ??
+    null,
 )
 
-export const isLatestPuzzle = computed(() => puzzle.value !== null && puzzle.value === recentAnswers.value[0])
+export const isLatestPuzzle = computed(
+  () => puzzle.value !== null && puzzle.value === recentAnswers.value[0],
+)
 
 export async function loadRecentAnswers(limit = 14) {
   if (answersStatus.value === 'loading' || answersStatus.value === 'ready') return

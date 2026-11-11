@@ -22,6 +22,7 @@ The script uses `cheerio` for HTML parsing. Dependencies are already installed v
 1. Save the HTML content from https://wordfinder.yourdictionary.com/wordle/answers/ to `debug/answers.html`
 
 2. Run the parser:
+
    ```bash
    bun parseAnswers.ts
    ```
@@ -50,11 +51,13 @@ The output is a JSON array with objects containing ISO 8601 dates and words:
 ## Date Calculation Strategy
 
 Rather than parsing the display date (which could be ambiguous), the script uses the **Wordle number** as the anchor:
+
 - Uses Wordle #1595 = October 31, 2025 as the reference point
 - Calculates all other dates relative to this reference
 - One Wordle puzzle per day, so the math is simple: `targetDate = referenceDate + (wordleNumber - referenceWordleNumber) days`
 
 This approach is:
+
 - **Reliable**: Not affected by date formatting changes
 - **Accurate**: Based on the official Wordle numbering system
 - **Repeatable**: Works for future updates to the page
@@ -77,7 +80,7 @@ bun parseAnswers.ts
 Your backend can simply read `answer-history.json` and deliver the past few days of history to clients:
 
 ```typescript
-const history = JSON.parse(fs.readFileSync('answer-history.json', 'utf-8'));
-const recentAnswers = history.slice(0, 7); // Last 7 days
-res.json(recentAnswers);
+const history = JSON.parse(fs.readFileSync('answer-history.json', 'utf-8'))
+const recentAnswers = history.slice(0, 7) // Last 7 days
+res.json(recentAnswers)
 ```

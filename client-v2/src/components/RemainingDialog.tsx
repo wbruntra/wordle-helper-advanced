@@ -24,12 +24,28 @@ export function RemainingDialog({ open, onClose, guesses }: RemainingDialogProps
   const remaining = useMemo(() => (open ? applyGuesses(WORDS, guesses) : []), [open, guesses])
 
   return (
-    <Modal open={open} onClose={onClose} title={`${remaining.length.toLocaleString()} word${remaining.length === 1 ? '' : 's'} left`}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={`${remaining.length.toLocaleString()} word${remaining.length === 1 ? '' : 's'} left`}
+    >
       <div class="segmented" role="tablist">
-        <button role="tab" aria-selected={tab === 'remaining'} onClick={() => setTab('remaining')}>Remaining</button>
-        <button role="tab" aria-selected={tab === 'eliminated'} onClick={() => setTab('eliminated')}>Eliminated</button>
+        <button role="tab" aria-selected={tab === 'remaining'} onClick={() => setTab('remaining')}>
+          Remaining
+        </button>
+        <button
+          role="tab"
+          aria-selected={tab === 'eliminated'}
+          onClick={() => setTab('eliminated')}
+        >
+          Eliminated
+        </button>
       </div>
-      {tab === 'remaining' ? <RemainingTab remaining={remaining} guessCount={guesses.length} /> : <EliminatedTab guesses={guesses} />}
+      {tab === 'remaining' ? (
+        <RemainingTab remaining={remaining} guessCount={guesses.length} />
+      ) : (
+        <EliminatedTab guesses={guesses} />
+      )}
     </Modal>
   )
 }
@@ -46,7 +62,11 @@ function RemainingTab({ remaining, guessCount }: { remaining: string[]; guessCou
   )
 
   const chance =
-    remaining.length === 1 ? 'Only one word left — that’s your answer.' : guessCount > 0 && remaining.length > 1 ? `A random pick wins ${(100 / remaining.length).toFixed(1)}% of the time.` : null
+    remaining.length === 1
+      ? 'Only one word left — that’s your answer.'
+      : guessCount > 0 && remaining.length > 1
+        ? `A random pick wins ${(100 / remaining.length).toFixed(1)}% of the time.`
+        : null
 
   return (
     <>
@@ -55,18 +75,37 @@ function RemainingTab({ remaining, guessCount }: { remaining: string[]; guessCou
       {canRank && (
         <label class="switch">
           <span>Suggest any word, not just possible answers</span>
-          <input type="checkbox" checked={anyWord} onChange={(e) => setAnyWord(e.currentTarget.checked)} />
+          <input
+            type="checkbox"
+            checked={anyWord}
+            onChange={(e) => setAnyWord(e.currentTarget.checked)}
+          />
         </label>
       )}
 
-      {canRank && ranked.status === 'loading' && <p class="muted"><span class="spinner" /> Ranking guesses…</p>}
+      {canRank && ranked.status === 'loading' && (
+        <p class="muted">
+          <span class="spinner" /> Ranking guesses…
+        </p>
+      )}
       {canRank && ranked.status === 'error' && <p class="notice notice-error">{ranked.message}</p>}
 
       {canRank && ranked.status === 'ready' ? (
         <>
-          <p class="field-hint">Best guesses first. “Wins within 2” is the chance of finishing by your next guess after it.</p>
-          <table class={`rank-table${ranked.stale ? ' rank-table-stale' : ''}`} aria-busy={ranked.stale}>
-            <thead><tr><th>Word</th><th>Wins within 2</th></tr></thead>
+          <p class="field-hint">
+            Best guesses first. “Wins within 2” is the chance of finishing by your next guess after
+            it.
+          </p>
+          <table
+            class={`rank-table${ranked.stale ? ' rank-table-stale' : ''}`}
+            aria-busy={ranked.stale}
+          >
+            <thead>
+              <tr>
+                <th>Word</th>
+                <th>Wins within 2</th>
+              </tr>
+            </thead>
             <tbody>
               {ranked.value.slice(0, SHOW_LIMIT).map(({ word, patterns }) => (
                 <tr key={word}>
@@ -79,7 +118,9 @@ function RemainingTab({ remaining, guessCount }: { remaining: string[]; guessCou
               ))}
             </tbody>
           </table>
-          {ranked.value.length > SHOW_LIMIT && <p class="field-hint">Showing the top {SHOW_LIMIT}.</p>}
+          {ranked.value.length > SHOW_LIMIT && (
+            <p class="field-hint">Showing the top {SHOW_LIMIT}.</p>
+          )}
         </>
       ) : (
         !canRank && <WordChips words={remaining} limit={SHOW_LIMIT} />
@@ -100,7 +141,8 @@ function EliminatedTab({ guesses }: { guesses: Guess[] }) {
     })
   }, [guesses])
 
-  if (guesses.length === 0) return <p class="muted">Make a guess to see which words it rules out.</p>
+  if (guesses.length === 0)
+    return <p class="muted">Make a guess to see which words it rules out.</p>
 
   return (
     <div class="eliminated">
@@ -121,9 +163,13 @@ function WordChips({ words, limit }: { words: string[]; limit: number }) {
   return (
     <>
       <div class="word-chips">
-        {words.slice(0, limit).map((word) => <code key={word}>{word}</code>)}
+        {words.slice(0, limit).map((word) => (
+          <code key={word}>{word}</code>
+        ))}
       </div>
-      {words.length > limit && <p class="field-hint">and {(words.length - limit).toLocaleString()} more</p>}
+      {words.length > limit && (
+        <p class="field-hint">and {(words.length - limit).toLocaleString()} more</p>
+      )}
     </>
   )
 }

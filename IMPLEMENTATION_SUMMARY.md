@@ -5,12 +5,14 @@
 The Wordle answers update system consists of two main components working together:
 
 ### 1. **TypeScript Parser** (`parseAnswers.ts`)
+
 - **Purpose**: Parses HTML files and extracts Wordle answers
 - **Input**: HTML file path (via command-line argument)
 - **Output**: `answer-history.json` with all extracted answers
 - **Date Calculation**: Uses Wordle number anchor (Oct 31, 2025 = #1595)
 
 ### 2. **Bash Orchestration Script** (`update-wordle-answers.sh`)
+
 - **Purpose**: Automates the full workflow for daily cron jobs
 - **Flow**: Download HTML → Parse → Generate JSON → Log results
 - **Output**: `answer-history.json` + logs to `update-wordle-answers.log`
@@ -50,12 +52,14 @@ The Wordle answers update system consists of two main components working togethe
 ### `parseAnswers.ts` (Updated)
 
 **Key Changes:**
+
 - ✅ Accepts HTML file path as command-line argument: `bun parseAnswers.ts <file-path>`
 - ✅ Falls back to default path if no argument provided
 - ✅ Validates file exists with helpful error messages
 - ✅ Works with any HTML input file
 
 **Usage:**
+
 ```bash
 # With explicit file path
 bun parseAnswers.ts temp_answers.html
@@ -65,6 +69,7 @@ bun parseAnswers.ts
 ```
 
 **Core Functions:**
+
 - `calculateDateFromWordleNumber(wordleNumber)` - Maps wordle # to date using anchor
 - `parseAnswersHtml(htmlPath)` - Extracts answers from HTML table
 - `main()` - Orchestrates parsing and output
@@ -72,6 +77,7 @@ bun parseAnswers.ts
 ### `update-wordle-answers.sh` (New)
 
 **Key Features:**
+
 - ✅ Downloads HTML using curl
 - ✅ Parses HTML using TypeScript script
 - ✅ Comprehensive error handling
@@ -81,12 +87,14 @@ bun parseAnswers.ts
 - ✅ Safe execution with `set -e` (exit on error)
 
 **Logging:**
+
 - All operations logged to `update-wordle-answers.log`
 - Timestamped entries for every action
 - Success/error indicators
 - Useful for monitoring cron job execution
 
 **Error Handling:**
+
 - Verifies curl download succeeded
 - Checks downloaded file is not empty
 - Validates TypeScript script executed successfully
@@ -96,6 +104,7 @@ bun parseAnswers.ts
 ### `CRON_JOB_SETUP.md` (New - Complete Guide)
 
 Comprehensive guide covering:
+
 - Prerequisites and setup
 - Manual execution
 - Cron job configuration examples
@@ -131,6 +140,7 @@ crontab -e
 ```
 
 Add this line (runs daily at 2 AM):
+
 ```cron
 0 2 * * * cd /home/william/workspace/personal/wordle-helper && ./update-wordle-answers.sh
 ```
@@ -168,29 +178,29 @@ Add this line (runs daily at 2 AM):
 
 ```javascript
 // Express.js example - expose answer history API
-const fs = require('fs');
+const fs = require('fs')
 
 app.get('/api/wordle/history', (req, res) => {
-  const answers = JSON.parse(fs.readFileSync('answer-history.json', 'utf-8'));
-  
+  const answers = JSON.parse(fs.readFileSync('answer-history.json', 'utf-8'))
+
   // Return last 7 answers
-  res.json(answers.slice(0, 7));
-});
+  res.json(answers.slice(0, 7))
+})
 
 app.get('/api/wordle/history/:days', (req, res) => {
-  const answers = JSON.parse(fs.readFileSync('answer-history.json', 'utf-8'));
-  const days = parseInt(req.params.days);
-  
+  const answers = JSON.parse(fs.readFileSync('answer-history.json', 'utf-8'))
+  const days = parseInt(req.params.days)
+
   // Return last N days of answers
-  res.json(answers.slice(0, Math.min(days, answers.length)));
-});
+  res.json(answers.slice(0, Math.min(days, answers.length)))
+})
 
 app.get('/api/wordle/today', (req, res) => {
-  const answers = JSON.parse(fs.readFileSync('answer-history.json', 'utf-8'));
-  
+  const answers = JSON.parse(fs.readFileSync('answer-history.json', 'utf-8'))
+
   // Return today's answer
-  res.json(answers[0]);
-});
+  res.json(answers[0])
+})
 ```
 
 ## Date Calculation Algorithm
@@ -212,6 +222,7 @@ Examples:
 ```
 
 **Why This Approach?**
+
 - ✅ Independent of HTML formatting
 - ✅ No need to parse date strings
 - ✅ Wordle number is immutable (set by NYT)
@@ -242,15 +253,15 @@ tail -f update-wordle-answers.log
 
 ## Files Generated/Modified
 
-| File | Type | Purpose |
-|------|------|---------|
-| `parseAnswers.ts` | TypeScript | HTML parser (updated to accept file path arg) |
-| `update-wordle-answers.sh` | Bash | Cron orchestration script (new) |
-| `answer-history.json` | JSON | Output: all extracted answers |
-| `update-wordle-answers.log` | Log | Execution logs with timestamps |
-| `temp_answers.html` | HTML | Temporary file (auto-cleaned) |
-| `CRON_JOB_SETUP.md` | Markdown | Setup & troubleshooting guide |
-| `PARSE_ANSWERS_README.md` | Markdown | Original parser documentation |
+| File                        | Type       | Purpose                                       |
+| --------------------------- | ---------- | --------------------------------------------- |
+| `parseAnswers.ts`           | TypeScript | HTML parser (updated to accept file path arg) |
+| `update-wordle-answers.sh`  | Bash       | Cron orchestration script (new)               |
+| `answer-history.json`       | JSON       | Output: all extracted answers                 |
+| `update-wordle-answers.log` | Log        | Execution logs with timestamps                |
+| `temp_answers.html`         | HTML       | Temporary file (auto-cleaned)                 |
+| `CRON_JOB_SETUP.md`         | Markdown   | Setup & troubleshooting guide                 |
+| `PARSE_ANSWERS_README.md`   | Markdown   | Original parser documentation                 |
 
 ## Next Steps
 
@@ -263,16 +274,19 @@ tail -f update-wordle-answers.log
 ## Support & Monitoring
 
 **For continuous monitoring:**
+
 ```bash
 watch -n 30 'tail -20 update-wordle-answers.log'
 ```
 
 **For debugging script issues:**
+
 ```bash
 bash -x ./update-wordle-answers.sh 2>&1 | tee debug-output.txt
 ```
 
 **For checking cron execution:**
+
 ```bash
 # On Linux
 sudo grep CRON /var/log/syslog | tail -20

@@ -2,18 +2,19 @@
 
 ## Files Overview
 
-| File | Type | Purpose |
-|------|------|---------|
-| `parseAnswers.ts` | TypeScript | Parses HTML and updates database |
-| `update-wordle-answers.sh` | Bash | Cron orchestration script |
-| `migrations/20251031...js` | Knex | Database schema migration |
-| `DATABASE_README.md` | Docs | Complete database guide |
-| `UPDATES_SUMMARY.md` | Docs | Summary of all changes |
-| `wordle.sqlite3` | Database | SQLite database with 1,595 answers |
+| File                       | Type       | Purpose                            |
+| -------------------------- | ---------- | ---------------------------------- |
+| `parseAnswers.ts`          | TypeScript | Parses HTML and updates database   |
+| `update-wordle-answers.sh` | Bash       | Cron orchestration script          |
+| `migrations/20251031...js` | Knex       | Database schema migration          |
+| `DATABASE_README.md`       | Docs       | Complete database guide            |
+| `UPDATES_SUMMARY.md`       | Docs       | Summary of all changes             |
+| `wordle.sqlite3`           | Database   | SQLite database with 1,595 answers |
 
 ## Quick Commands
 
 ### Initial Setup
+
 ```bash
 # Run migration to create table
 npx knex migrate:latest
@@ -26,6 +27,7 @@ sqlite3 wordle.sqlite3 "SELECT COUNT(*) FROM answer_history;"
 ```
 
 ### Daily Operations
+
 ```bash
 # Run update script (as cron)
 ./update-wordle-answers.sh
@@ -38,6 +40,7 @@ bun parseAnswers.ts debug/answers.html
 ```
 
 ### Database Queries
+
 ```bash
 # Connect to database
 sqlite3 wordle.sqlite3
@@ -59,6 +62,7 @@ SELECT COUNT(*) FROM answer_history;
 ```
 
 ### Cron Setup
+
 ```bash
 # Open crontab editor
 crontab -e
@@ -84,40 +88,39 @@ crontab -l
 ✅ Logged - All operations tracked to file  
 ✅ Automated - Works via cron job  
 ✅ Flexible - SQL queries for any filtering  
-✅ Scalable - Database grows efficiently  
+✅ Scalable - Database grows efficiently
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| Migration fails | `npx knex migrate:rollback && npx knex migrate:latest` |
-| Script fails | `bun parseAnswers.ts debug/answers.html` (test manually) |
-| Cron not running | `crontab -l` (check if scheduled), `tail -f /var/log/syslog` (check logs) |
-| Database errors | `sqlite3 wordle.sqlite3 ".schema answer_history"` (verify table exists) |
-| No new data | Check HTML file size: `curl -I https://wordfinder.yourdictionary.com/wordle/answers/` |
+| Issue            | Solution                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------- |
+| Migration fails  | `npx knex migrate:rollback && npx knex migrate:latest`                                |
+| Script fails     | `bun parseAnswers.ts debug/answers.html` (test manually)                              |
+| Cron not running | `crontab -l` (check if scheduled), `tail -f /var/log/syslog` (check logs)             |
+| Database errors  | `sqlite3 wordle.sqlite3 ".schema answer_history"` (verify table exists)               |
+| No new data      | Check HTML file size: `curl -I https://wordfinder.yourdictionary.com/wordle/answers/` |
 
 ## Backend Integration
 
 ### Express.js
+
 ```javascript
-const knex = require('knex');
-const config = require('./knexfile');
-const db = knex(config.development);
+const knex = require('knex')
+const config = require('./knexfile')
+const db = knex(config.development)
 
 // Get today's answer
 app.get('/api/wordle/today', async (req, res) => {
-  const today = new Date().toISOString().split('T')[0];
-  const answer = await db('answer_history').where('date', today).first();
-  res.json(answer);
-});
+  const today = new Date().toISOString().split('T')[0]
+  const answer = await db('answer_history').where('date', today).first()
+  res.json(answer)
+})
 
 // Get last 7 days
 app.get('/api/wordle/history', async (req, res) => {
-  const answers = await db('answer_history')
-    .orderBy('date', 'desc')
-    .limit(7);
-  res.json(answers.reverse());
-});
+  const answers = await db('answer_history').orderBy('date', 'desc').limit(7)
+  res.json(answers.reverse())
+})
 ```
 
 ## API Response Format

@@ -20,7 +20,10 @@ export function rankGuesses(
   allWords: string[],
   includeAllWords: boolean,
 ): RankedWord[] {
-  const score = (word: string): RankedWord => ({ word, patterns: binSizes(word, remaining).length })
+  const score = (word: string): RankedWord => ({
+    word,
+    patterns: binSizes(word, remaining).length,
+  })
   const byPatterns = (a: RankedWord, b: RankedWord) => b.patterns - a.patterns
 
   const fromRemaining = remaining.map(score).sort(byPatterns)

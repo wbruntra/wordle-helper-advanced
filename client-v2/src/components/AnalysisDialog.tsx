@@ -43,8 +43,22 @@ export function AnalysisDialog({ open, onClose, guesses }: AnalysisDialogProps) 
       title="How you did"
       footer={
         <>
-          <button class="btn" style={{ flex: 1 }} disabled={turn === 0} onClick={() => setTurn(turn - 1)}>← Previous</button>
-          <button class="btn" style={{ flex: 1 }} disabled={turn >= guesses.length - 1} onClick={() => setTurn(turn + 1)}>Next →</button>
+          <button
+            class="btn"
+            style={{ flex: 1 }}
+            disabled={turn === 0}
+            onClick={() => setTurn(turn - 1)}
+          >
+            ← Previous
+          </button>
+          <button
+            class="btn"
+            style={{ flex: 1 }}
+            disabled={turn >= guesses.length - 1}
+            onClick={() => setTurn(turn + 1)}
+          >
+            Next →
+          </button>
         </>
       }
     >
@@ -52,9 +66,15 @@ export function AnalysisDialog({ open, onClose, guesses }: AnalysisDialogProps) 
         <p class="muted">Make a guess first.</p>
       ) : (
         <>
-          <p class="muted analysis-step">Guess {turn + 1} of {guesses.length}</p>
+          <p class="muted analysis-step">
+            Guess {turn + 1} of {guesses.length}
+          </p>
           {error && <p class="notice notice-error">{error}</p>}
-          {!analysis && !error && <p class="muted"><span class="spinner" /> Crunching the numbers…</p>}
+          {!analysis && !error && (
+            <p class="muted">
+              <span class="spinner" /> Crunching the numbers…
+            </p>
+          )}
           {analysis && <TurnView guess={guess} analysis={analysis} />}
         </>
       )}
@@ -78,9 +98,18 @@ function TurnView({ guess, analysis }: { guess: Guess; analysis: TurnAnalysis })
       <div class="analysis-cards">
         <Card title="You played" word={guess.word} keyString={guess.key} analysis={played} />
         {best ? (
-          <Card title="Best move" word={best.word} keyString="-----" analysis={best.analysis} highlight />
+          <Card
+            title="Best move"
+            word={best.word}
+            keyString="-----"
+            analysis={best.analysis}
+            highlight
+          />
         ) : (
-          <section class="analysis-card"><h3>Best move</h3><p class="muted">{analysis.note}</p></section>
+          <section class="analysis-card">
+            <h3>Best move</h3>
+            <p class="muted">{analysis.note}</p>
+          </section>
         )}
       </div>
 
@@ -89,29 +118,65 @@ function TurnView({ guess, analysis }: { guess: Guess; analysis: TurnAnalysis })
         {patternGap === null ? (
           <p class="muted">Couldn’t compare this turn.</p>
         ) : patternGap > 0 ? (
-          <p>The best move would have split the words into {patternGap} more pattern{patternGap === 1 ? '' : 's'}.</p>
+          <p>
+            The best move would have split the words into {patternGap} more pattern
+            {patternGap === 1 ? '' : 's'}.
+          </p>
         ) : patternGap === 0 ? (
           <p>You played the best move. 🎯</p>
         ) : (
-          <p>Your guess made {-patternGap} more pattern{patternGap === -1 ? '' : 's'} than the suggestion. 🌟</p>
+          <p>
+            Your guess made {-patternGap} more pattern{patternGap === -1 ? '' : 's'} than the
+            suggestion. 🌟
+          </p>
         )}
-        {scoreGap !== null && scoreGap > 0.005 && <p class="muted">Information score: {scoreGap.toFixed(1)} behind the best move.</p>}
-        {analysis.note && best && <p class="muted"><em>{analysis.note}</em></p>}
+        {scoreGap !== null && scoreGap > 0.005 && (
+          <p class="muted">Information score: {scoreGap.toFixed(1)} behind the best move.</p>
+        )}
+        {analysis.note && best && (
+          <p class="muted">
+            <em>{analysis.note}</em>
+          </p>
+        )}
       </section>
     </>
   )
 }
 
-function Card({ title, word, keyString, analysis, highlight }: { title: string; word: string; keyString: string; analysis: GuessAnalysis; highlight?: boolean }) {
+function Card({
+  title,
+  word,
+  keyString,
+  analysis,
+  highlight,
+}: {
+  title: string
+  word: string
+  keyString: string
+  analysis: GuessAnalysis
+  highlight?: boolean
+}) {
   return (
     <section class={`analysis-card${highlight ? ' analysis-card-best' : ''}`}>
       <h3>{title}</h3>
       <GuessTiles word={word} keyString={keyString} size={34} />
       <dl>
-        <div><dt>Patterns</dt><dd>{analysis.patterns}</dd></div>
-        <div><dt>Avg words / pattern</dt><dd>{analysis.avgBinSize.toFixed(2)}</dd></div>
-        <div><dt>Largest group</dt><dd>{analysis.maxBinSize}</dd></div>
-        <div><dt>Info score</dt><dd>{analysis.score.toFixed(1)}</dd></div>
+        <div>
+          <dt>Patterns</dt>
+          <dd>{analysis.patterns}</dd>
+        </div>
+        <div>
+          <dt>Avg words / pattern</dt>
+          <dd>{analysis.avgBinSize.toFixed(2)}</dd>
+        </div>
+        <div>
+          <dt>Largest group</dt>
+          <dd>{analysis.maxBinSize}</dd>
+        </div>
+        <div>
+          <dt>Info score</dt>
+          <dd>{analysis.score.toFixed(1)}</dd>
+        </div>
       </dl>
     </section>
   )

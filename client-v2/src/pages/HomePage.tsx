@@ -4,7 +4,14 @@ import { MenuIcon } from '../components/Icons'
 import { MenuDialog } from '../components/MenuDialog'
 import { formatPuzzleDate } from '../lib/format'
 import { answersStatus, puzzle, showAnswer } from '../state/answers'
-import { backspace, dailyGuesses, dailyStatus, draft, submitDraft, typeLetter } from '../state/daily'
+import {
+  backspace,
+  dailyGuesses,
+  dailyStatus,
+  draft,
+  submitDraft,
+  typeLetter,
+} from '../state/daily'
 import { href } from '../state/router'
 
 const performance = ['Genius', 'Magnificent', 'Impressive', 'Splendid', 'Great', 'Phew']
@@ -24,15 +31,28 @@ export function HomePage() {
         <p class="notice">Loading today’s puzzle…</p>
       ) : (
         <p class="notice notice-error">
-          Couldn’t load today’s word. You can still solve any puzzle in <a href={href('/custom')}>custom mode</a>.
+          Couldn’t load today’s word. You can still solve any puzzle in{' '}
+          <a href={href('/custom')}>custom mode</a>.
         </p>
       )
   } else if (status === 'won') {
-    banner = <p class="notice notice-success"><strong>{performance[guesses.length - 1]}!</strong> Solved in {guesses.length}.</p>
+    banner = (
+      <p class="notice notice-success">
+        <strong>{performance[guesses.length - 1]}!</strong> Solved in {guesses.length}.
+      </p>
+    )
   } else if (status === 'lost') {
-    banner = <p class="notice">The answer was <strong class="mono">{current.word}</strong>.</p>
+    banner = (
+      <p class="notice">
+        The answer was <strong class="mono">{current.word}</strong>.
+      </p>
+    )
   } else if (showAnswer.value) {
-    banner = <p class="notice">Answer: <strong class="mono">{current.word}</strong></p>
+    banner = (
+      <p class="notice">
+        Answer: <strong class="mono">{current.word}</strong>
+      </p>
+    )
   }
 
   return (

@@ -11,7 +11,9 @@ const gamesByDate = persistedSignal<Record<string, string[]>>('dailyGames', {})
 /** Letters typed for the guess in progress. */
 export const draft = signal('')
 
-export const dailyWords = computed(() => (puzzle.value ? (gamesByDate.value[puzzle.value.date] ?? []) : []))
+export const dailyWords = computed(() =>
+  puzzle.value ? (gamesByDate.value[puzzle.value.date] ?? []) : [],
+)
 
 export const dailyGuesses = computed<Guess[]>(() => {
   const answer = puzzle.value?.word
@@ -42,7 +44,8 @@ export function backspace() {
 }
 
 export function submitDraft() {
-  if (!puzzle.value || dailyStatus.value !== 'playing' || draft.value.length !== WORD_LENGTH) return
+  if (!puzzle.value || dailyStatus.value !== 'playing' || draft.value.length !== WORD_LENGTH)
+    return
   setWords([...dailyWords.value, draft.value])
   draft.value = ''
 }

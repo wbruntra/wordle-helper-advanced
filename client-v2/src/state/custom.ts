@@ -4,7 +4,10 @@ import { persistedSignal } from './persisted'
 /** Guesses (word + colours) entered by hand on the custom page. */
 export const customGuesses = persistedSignal<Guess[]>('customGuesses', [])
 
-const clean = (guess: Guess): Guess => ({ word: normalizeWord(guess.word), key: normalizeKey(guess.key) })
+const clean = (guess: Guess): Guess => ({
+  word: normalizeWord(guess.word),
+  key: normalizeKey(guess.key),
+})
 
 export const addCustomGuess = (guess: Guess) => {
   customGuesses.value = [...customGuesses.value, clean(guess)]

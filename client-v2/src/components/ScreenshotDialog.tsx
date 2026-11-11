@@ -36,9 +36,19 @@ export function ScreenshotDialog({ open, onClose, onImport }: ScreenshotDialogPr
       </p>
       <div class="field">
         <label for="screenshot-file">Screenshot</label>
-        <input id="screenshot-file" type="file" accept="image/*" disabled={busy} onChange={(e) => handleFile(e.currentTarget.files?.[0])} />
+        <input
+          id="screenshot-file"
+          type="file"
+          accept="image/*"
+          disabled={busy}
+          onChange={(e) => handleFile(e.currentTarget.files?.[0])}
+        />
       </div>
-      {busy && <p class="muted"><span class="spinner" /> Reading screenshot…</p>}
+      {busy && (
+        <p class="muted">
+          <span class="spinner" /> Reading screenshot…
+        </p>
+      )}
       {error && <p class="notice notice-error">{error}</p>}
     </Modal>
   )

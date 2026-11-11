@@ -1,17 +1,59 @@
-.keyboard { display: grid; gap: 8px; width: 100%; max-width: 500px; margin: 0 auto; padding: 0 6px; touch-action: manipulation; }
-.keyboard-row { display: flex; justify-content: center; gap: 6px; }
+.keyboard {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 0 6px;
+  touch-action: manipulation;
+}
+.keyboard-row {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
 
 .key {
-  flex: 1 1 0; min-width: 0; height: 58px; padding: 0; border: 0; border-radius: 4px;
-  background: var(--key-bg); color: var(--key-text);
-  font: 700 1rem/1 var(--font); text-transform: uppercase;
-  display: grid; place-items: center; user-select: none;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 58px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: var(--key-bg);
+  color: var(--key-text);
+  font: 700 1rem/1 var(--font);
+  text-transform: uppercase;
+  display: grid;
+  place-items: center;
+  user-select: none;
 }
-.key:active:not(:disabled) { filter: brightness(0.85); }
-.key:disabled { opacity: 0.6; }
-.key-wide { flex: 1.5 1 0; font-size: 0.75rem; }
-.key-correct { background: var(--correct); color: #fff; }
-.key-present { background: var(--present); color: #fff; }
-.key-absent { background: var(--absent); color: #fff; opacity: 0.8; }
+.key:active:not(:disabled) {
+  filter: brightness(0.85);
+}
+.key:disabled {
+  opacity: 0.6;
+}
+.key-wide {
+  flex: 1.5 1 0;
+  font-size: 0.75rem;
+}
+.key-correct {
+  background: var(--correct);
+  color: #fff;
+}
+.key-present {
+  background: var(--present);
+  color: #fff;
+}
+.key-absent {
+  background: var(--absent);
+  color: #fff;
+  opacity: 0.8;
+}
 
-@media (max-height: 640px) { .key { height: 48px; } }
+@media (max-height: 640px) {
+  .key {
+    height: 48px;
+  }
+}

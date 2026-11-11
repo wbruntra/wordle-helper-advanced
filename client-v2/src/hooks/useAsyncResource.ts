@@ -22,7 +22,9 @@ export function useJob<T>(
   useEffect(() => {
     if (!enabled) return
     // Keep showing the previous result while recomputing, so the layout doesn't jump.
-    setState((current) => (current.status === 'ready' ? { ...current, stale: true } : { status: 'loading' }))
+    setState((current) =>
+      current.status === 'ready' ? { ...current, stale: true } : { status: 'loading' },
+    )
     return start(
       (value) => setState({ status: 'ready', value }),
       (message) => setState({ status: 'error', message }),

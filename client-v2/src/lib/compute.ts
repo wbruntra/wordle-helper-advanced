@@ -13,15 +13,21 @@ const listeners = new Map<number, (result: ComputeResult) => void>()
 
 function getWorker(): Worker {
   if (!worker) {
-    worker = new Worker(new URL('../workers/compute.worker.ts', import.meta.url), { type: 'module' })
-    worker.onmessage = (event: MessageEvent<ComputeResult>) => listeners.get(event.data.id)?.(event.data)
+    worker = new Worker(new URL('../workers/compute.worker.ts', import.meta.url), {
+      type: 'module',
+    })
+    worker.onmessage = (event: MessageEvent<ComputeResult>) =>
+      listeners.get(event.data.id)?.(event.data)
   }
   return worker
 }
 
 type DistributiveOmit<T, K extends keyof never> = T extends unknown ? Omit<T, K> : never
 
-function start(request: DistributiveOmit<ComputeRequest, 'id'>, onResult: (r: ComputeResult) => void) {
+function start(
+  request: DistributiveOmit<ComputeRequest, 'id'>,
+  onResult: (r: ComputeResult) => void,
+) {
   const id = nextId++
   listeners.set(id, onResult)
   getWorker().postMessage({ ...request, id })

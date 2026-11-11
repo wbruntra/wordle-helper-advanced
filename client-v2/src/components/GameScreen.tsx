@@ -31,7 +31,8 @@ interface GameScreenProps {
   onTileClick?: (index: number) => void
 }
 
-type Dialog = { kind: 'remaining' } | { kind: 'analysis' } | { kind: 'breakdown'; index: number } | null
+type Dialog =
+  { kind: 'remaining' } | { kind: 'analysis' } | { kind: 'breakdown'; index: number } | null
 
 /**
  * The shared play surface: header, board, keyboard and the solver tools (words left,
@@ -55,8 +56,10 @@ export function GameScreen(props: GameScreenProps) {
   // Physical keyboard support, paused while a dialog or form control has focus.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.metaKey || event.ctrlKey || event.altKey || document.querySelector('dialog[open]')) return
-      if (event.target instanceof HTMLElement && event.target.closest('input, select, textarea')) return
+      if (event.metaKey || event.ctrlKey || event.altKey || document.querySelector('dialog[open]'))
+        return
+      if (event.target instanceof HTMLElement && event.target.closest('input, select, textarea'))
+        return
       if (event.key === 'Enter') {
         // Let a focused button handle its own Enter press.
         if (event.target instanceof HTMLButtonElement) return
@@ -82,7 +85,11 @@ export function GameScreen(props: GameScreenProps) {
         </div>
         <div class="screen-header-side screen-header-end">
           {guesses.length > 0 && (
-            <button class="icon-btn" onClick={() => setDialog({ kind: 'analysis' })} aria-label="How you did">
+            <button
+              class="icon-btn"
+              onClick={() => setDialog({ kind: 'analysis' })}
+              aria-label="How you did"
+            >
               <ChartIcon />
             </button>
           )}
@@ -104,7 +111,8 @@ export function GameScreen(props: GameScreenProps) {
         />
 
         <button class="words-left" onClick={() => setDialog({ kind: 'remaining' })}>
-          <strong>{remaining.length.toLocaleString()}</strong> {remaining.length === 1 ? 'word' : 'words'} left
+          <strong>{remaining.length.toLocaleString()}</strong>{' '}
+          {remaining.length === 1 ? 'word' : 'words'} left
           <span class="chip">{phase}</span>
         </button>
         {guesses.length > 0 && remaining.length === 0 && (
@@ -125,7 +133,13 @@ export function GameScreen(props: GameScreenProps) {
 
       <RemainingDialog open={dialog?.kind === 'remaining'} onClose={close} guesses={guesses} />
       <AnalysisDialog open={dialog?.kind === 'analysis'} onClose={close} guesses={guesses} />
-      <BreakdownDialog open={dialog?.kind === 'breakdown'} onClose={close} guesses={guesses} index={lastBreakdown} answer={answer} />
+      <BreakdownDialog
+        open={dialog?.kind === 'breakdown'}
+        onClose={close}
+        guesses={guesses}
+        index={lastBreakdown}
+        answer={answer}
+      />
     </div>
   )
 }
