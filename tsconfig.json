@@ -26,7 +26,7 @@
     "emitDecoratorMetadata": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
-    "typeRoots": ["./node_modules/@types", "./src/types"],
+    "typeRoots": ["./node_modules/@types"],
     "paths": {
       "@/*": ["./*"],
       "@config": ["./config.js"],
@@ -34,7 +34,7 @@
       "@db_connection": ["./db_connect.js"]
     }
   },
-  "include": ["app.ts", "bin/**/*", "src/**/*", "utils/**/*", "*.ts"],
+  "include": ["app.ts", "bin/**/*", "*.ts"],
   "exclude": [
     "node_modules",
     "client/**/*",

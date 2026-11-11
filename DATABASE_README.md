@@ -15,8 +15,8 @@ The system now consists of:
 ```
 Cron Job (Daily)
     ↓
-update-wordle-answers.sh (bash script)
-    ├─ Download HTML with curl
+update-wordle-answers.ts (bun script)
+    ├─ Download HTML with axios
     ├─ Call parseAnswers.ts
     │  ├─ Parse HTML table
     │  ├─ Check existing dates in DB
@@ -126,47 +126,18 @@ Database already has 1595 entries
 ✓ Most recent entry in DB: 2025-11-01 = BRINY
 ```
 
-## Bash Script - `update-wordle-answers.sh`
+## Cron Script - `update-wordle-answers.ts`
 
-### Features
-
-- ✅ Downloads HTML using curl
-- ✅ Executes TypeScript parser with temp file
-- ✅ Comprehensive error handling
-- ✅ Colored console output
-- ✅ Detailed logging with timestamps
-- ✅ Automatic cleanup of temporary files
-- ✅ Exit codes for cron monitoring
+See [CRON_JOB_SETUP.md](CRON_JOB_SETUP.md) for the features, the crontab entry and monitoring.
 
 ### Usage
 
 ```bash
 # Run manually
-./update-wordle-answers.sh
+./update-wordle-answers.ts
 
 # Run from cron (automatic)
-0 2 * * * cd /path/to/wordle-helper && ./update-wordle-answers.sh
-```
-
-### Cron Job Setup
-
-Add to crontab:
-
-```bash
-crontab -e
-```
-
-Example entries:
-
-```cron
-# Run at 2:00 AM daily (recommended)
-0 2 * * * cd /home/william/workspace/personal/wordle-helper && ./update-wordle-answers.sh
-
-# Run at 12:05 AM (just after midnight)
-5 0 * * * cd /home/william/workspace/personal/wordle-helper && ./update-wordle-answers.sh
-
-# Run every 6 hours
-0 */6 * * * cd /home/william/workspace/personal/wordle-helper && ./update-wordle-answers.sh
+0 3 * * * cd /home/william/wordle-helper-advanced && ./update-wordle-answers.ts >> /home/william/logs/wordle-update.log 2>&1
 ```
 
 ### Log File
@@ -296,7 +267,7 @@ app.get('/api/wordle/date/:date', async (req, res) => {
    - Linux: `sudo grep CRON /var/log/syslog`
    - macOS: `log stream --predicate 'process == "cron"'`
 3. Verify Bun path in cron: `which bun`
-4. Run manually to debug: `bash -x ./update-wordle-answers.sh`
+4. Run manually to debug: `bun ./update-wordle-answers.ts`
 
 ### Performance Issues
 
@@ -309,7 +280,7 @@ app.get('/api/wordle/date/:date', async (req, res) => {
 | File                                                 | Purpose                                 |
 | ---------------------------------------------------- | --------------------------------------- |
 | `parseAnswers.ts`                                    | TypeScript HTML parser (updated for DB) |
-| `update-wordle-answers.sh`                           | Bash cron orchestration script          |
+| `update-wordle-answers.ts`                           | Cron script: download, parse and store  |
 | `knexfile.js`                                        | Knex database configuration             |
 | `migrations/20251031110821_create_answer_history.js` | Database schema migration               |
 | `wordle.sqlite3`                                     | SQLite database file                    |
