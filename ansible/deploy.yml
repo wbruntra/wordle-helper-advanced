@@ -4,7 +4,9 @@
 - name: Deploy wordle-helper
   hosts: '{{ deployment | mandatory("Pass -e deployment=<profile>, e.g. -e deployment=production") }}'
   vars:
-    node_bin_dir: '/home/{{ ansible_user }}/.nvm/versions/node/{{ pm2_node_version }}/bin'
+    # pm2 is a global bun install. ~/.local/bin/pm2 is a wrapper that runs it
+    # under the bun runtime (pm2's own shebang needs node, which is gone).
+    pm2_bin_dir: '/home/{{ ansible_user }}/.local/bin:/home/{{ ansible_user }}/.bun/bin'
     secrets_bundle: '{{ playbook_dir }}/files/{{ deployment }}/secrets.js'
 
   tasks:
@@ -76,8 +78,9 @@
 
     - name: 6. Restart the app (pm2)
       environment:
-        # pm2 lives under nvm, which a non-interactive shell doesn't put on PATH.
-        PATH: '{{ node_bin_dir }}:{{ ansible_env.PATH }}'
+        # pm2 and bun live under the home directory, which a non-interactive
+        # shell doesn't put on PATH.
+        PATH: '{{ pm2_bin_dir }}:{{ ansible_env.PATH }}'
       block:
         - name: Recreate the pm2 process if its entry script changed
           shell: |

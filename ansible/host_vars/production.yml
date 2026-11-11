@@ -8,7 +8,6 @@ project_root: /home/william/wordle-helper-advanced
 target_branch: master
 # Must match pm2_name in ~/sysperf/waker/apps.config.ts.
 pm2_name: wordle-helper-api
-pm2_node_version: v24.12.0
 # Must match PORT in ecosystem.config.cjs and the wordle entry in
 # ~/sysperf/waker/apps.config.ts.
 app_port: 3001
