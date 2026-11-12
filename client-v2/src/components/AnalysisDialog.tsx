@@ -85,7 +85,10 @@ export function AnalysisDialog({ open, onClose, guesses }: AnalysisDialogProps) 
 function TurnView({ guess, analysis }: { guess: Guess; analysis: TurnAnalysis }) {
   const { played, best } = analysis
   const patternGap = best ? best.analysis.patterns - played.patterns : null
-  const scoreGap = best ? best.analysis.score - played.score : null
+  const guessesGap = analysis.expectedGuesses
+    ? analysis.expectedGuesses.played - analysis.expectedGuesses.best
+    : null
+  const bitsGap = best ? best.analysis.bits - played.bits : null
 
   return (
     <>
@@ -130,8 +133,14 @@ function TurnView({ guess, analysis }: { guess: Guess; analysis: TurnAnalysis })
             suggestion. 🌟
           </p>
         )}
-        {scoreGap !== null && scoreGap > 0.005 && (
-          <p class="muted">Information score: {scoreGap.toFixed(1)} behind the best move.</p>
+        {bitsGap !== null && bitsGap >= 0.05 && (
+          <p class="muted">
+            −{bitsGap.toFixed(1)} bits
+            {guessesGap !== null && guessesGap >= 0.005 && (
+              <> · +{guessesGap.toFixed(2)} guesses</>
+            )}{' '}
+            vs best
+          </p>
         )}
         {analysis.note && best && (
           <p class="muted">
@@ -174,8 +183,8 @@ function Card({
           <dd>{analysis.maxBinSize}</dd>
         </div>
         <div>
-          <dt>Info score</dt>
-          <dd>{analysis.score.toFixed(1)}</dd>
+          <dt>Information</dt>
+          <dd>{analysis.bits.toFixed(2)} bits</dd>
         </div>
       </dl>
     </section>
