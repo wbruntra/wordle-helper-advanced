@@ -3,7 +3,8 @@ import {
   isLatestPuzzle,
   puzzle,
   recentAnswers,
-  selectedDate,
+  viewDate,
+  viewedDate,
   showAnswer,
 } from '../state/answers'
 import { restartDaily } from '../state/daily'
@@ -29,9 +30,9 @@ export function MenuDialog({ open, onClose }: { open: boolean; onClose: () => vo
         ) : (
           <select
             id="puzzle-date"
-            value={current?.date}
+            value={viewedDate.value ?? undefined}
             onChange={(e) => {
-              selectedDate.value = e.currentTarget.value
+              viewDate(e.currentTarget.value)
               onClose()
             }}
           >

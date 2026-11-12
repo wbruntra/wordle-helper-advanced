@@ -20,6 +20,8 @@ export interface TurnAnalysis {
   note: string | null
 }
 
+export type BestMoveScope = 'possible' | 'any'
+
 const MAX_WORDS_FOR_BEST = 2000
 
 /** Shannon entropy of the pattern distribution, in bits: how much a guess is expected to narrow things down. */
@@ -39,8 +41,14 @@ export function analyzeGuess(guess: string, remaining: string[]): GuessAnalysis 
   }
 }
 
-/** The highest-information guess among `remaining`. */
-function findBestGuess(remaining: string[]): {
+/**
+ * The highest-information guess among `candidates` (default: `remaining`).
+ * Ties go to words that could still be the answer, then to candidate order.
+ */
+function findBestGuess(
+  remaining: string[],
+  candidates: string[] = remaining,
+): {
   word: string
   analysis: GuessAnalysis
   note: string
@@ -53,10 +61,17 @@ function findBestGuess(remaining: string[]): {
     }
   }
 
+  const isRemaining = new Set(remaining)
   let best: { word: string; analysis: GuessAnalysis } | null = null
-  for (const word of remaining) {
+  for (const word of candidates) {
     const analysis = analyzeGuess(word, remaining)
-    if (!best || analysis.bits > best.analysis.bits) best = { word, analysis }
+    const better =
+      !best ||
+      analysis.bits > best.analysis.bits ||
+      (analysis.bits === best.analysis.bits &&
+        isRemaining.has(word) &&
+        !isRemaining.has(best.word))
+    if (better) best = { word, analysis }
   }
 
   return { ...best!, note: '' }
@@ -77,7 +92,13 @@ export function expectedGuesses(guess: string, remaining: string[]): number {
 }
 
 /** How the guess at `index` compares with the best available move at that point. */
-export function analyzeTurn(words: string[], guesses: Guess[], index: number): TurnAnalysis {
+export function analyzeTurn(
+  words: string[],
+  guesses: Guess[],
+  index: number,
+  /** Whether the best move may be any word, or only one that could still be the answer. */
+  scope: BestMoveScope = 'possible',
+): TurnAnalysis {
   const remaining = applyGuesses(words, guesses.slice(0, index))
   const guess = guesses[index]
   const played = analyzeGuess(guess.word, remaining)
@@ -92,7 +113,7 @@ export function analyzeTurn(words: string[], guesses: Guess[], index: number): T
     }
   }
 
-  const { word, analysis, note } = findBestGuess(remaining)
+  const { word, analysis, note } = findBestGuess(remaining, scope === 'any' ? words : remaining)
   return {
     remainingBefore: remaining.length,
     played,

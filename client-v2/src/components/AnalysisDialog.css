@@ -50,3 +50,11 @@
 .verdict {
   margin-top: 12px;
 }
+
+.analysis-scope {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 0.875rem;
+}

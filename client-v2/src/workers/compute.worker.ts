@@ -2,7 +2,7 @@
  * Runs the expensive solver computations off the main thread so the UI stays
  * responsive. Requests and responses are matched by `id`.
  */
-import { analyzeTurn, type TurnAnalysis } from '../lib/analysis'
+import { analyzeTurn, type BestMoveScope, type TurnAnalysis } from '../lib/analysis'
 import { rankGuesses, type Ranking } from '../lib/ranking'
 import type { Guess } from '@wordle/shared'
 
@@ -15,7 +15,7 @@ export type ComputeRequest =
       includeAllWords: boolean
       limit: number
     }
-  | { id: number; type: 'analyzeTurns'; words: string[]; guesses: Guess[] }
+  | { id: number; type: 'analyzeTurns'; words: string[]; guesses: Guess[]; scope: BestMoveScope }
 
 export type ComputeResult =
   | { id: number; type: 'rank'; ranking: Ranking }
@@ -36,7 +36,7 @@ self.onmessage = (event: MessageEvent<ComputeRequest>) => {
       self.postMessage({ id: request.id, type: 'rank', ranking } satisfies ComputeResult)
     } else {
       request.guesses.forEach((_guess, index) => {
-        const analysis = analyzeTurn(request.words, request.guesses, index)
+        const analysis = analyzeTurn(request.words, request.guesses, index, request.scope)
         self.postMessage({ id: request.id, type: 'turn', index, analysis } satisfies ComputeResult)
       })
       self.postMessage({ id: request.id, type: 'done' } satisfies ComputeResult)

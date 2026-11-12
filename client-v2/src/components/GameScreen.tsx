@@ -12,7 +12,7 @@ import './GameScreen.css'
 
 interface GameScreenProps {
   title: string
-  subtitle?: string
+  subtitle?: ComponentChildren
   headerStart?: ComponentChildren
   headerEnd?: ComponentChildren
   banner?: ComponentChildren

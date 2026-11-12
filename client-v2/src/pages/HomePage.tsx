@@ -3,7 +3,8 @@ import { GameScreen } from '../components/GameScreen'
 import { MenuIcon } from '../components/Icons'
 import { MenuDialog } from '../components/MenuDialog'
 import { formatPuzzleDate } from '../lib/format'
-import { answersStatus, puzzle, showAnswer } from '../state/answers'
+import { DateNav } from '../components/DateNav'
+import { answersStatus, puzzle, showAnswer, viewedDate } from '../state/answers'
 import {
   backspace,
   dailyGuesses,
@@ -29,6 +30,12 @@ export function HomePage() {
     banner =
       answersStatus.value === 'loading' || answersStatus.value === 'idle' ? (
         <p class="notice">Loading today’s puzzle…</p>
+      ) : answersStatus.value === 'ready' ? (
+        <p class="notice">
+          No puzzle is recorded for{' '}
+          {viewedDate.value ? formatPuzzleDate(viewedDate.value) : 'this date'}. Use the arrows to
+          try another day.
+        </p>
       ) : (
         <p class="notice notice-error">
           Couldn’t load today’s word. You can still solve any puzzle in{' '}
@@ -59,7 +66,7 @@ export function HomePage() {
     <>
       <GameScreen
         title="Wordle Helper"
-        subtitle={current ? formatPuzzleDate(current.date) : undefined}
+        subtitle={<DateNav />}
         headerEnd={
           <button class="icon-btn" onClick={() => setMenuOpen(true)} aria-label="Menu">
             <MenuIcon />

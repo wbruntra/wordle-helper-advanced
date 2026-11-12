@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks'
-import type { GuessAnalysis, TurnAnalysis } from '../lib/analysis'
+import type { BestMoveScope, GuessAnalysis, TurnAnalysis } from '../lib/analysis'
 import { analyzeTurnsInWorker } from '../lib/compute'
 import { type Guess, LIKELY_WORDS as WORDS } from '@wordle/shared'
 import { GuessTiles } from './GuessTiles'
@@ -16,6 +16,7 @@ interface AnalysisDialogProps {
 export function AnalysisDialog({ open, onClose, guesses }: AnalysisDialogProps) {
   const [turn, setTurn] = useState(0)
   const [turns, setTurns] = useState<Record<number, TurnAnalysis>>({})
+  const [scope, setScope] = useState<BestMoveScope>('possible')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -27,11 +28,12 @@ export function AnalysisDialog({ open, onClose, guesses }: AnalysisDialogProps) 
     const cancel = analyzeTurnsInWorker(
       WORDS,
       guesses,
+      scope,
       (index, analysis) => setTurns((current) => ({ ...current, [index]: analysis })),
       setError,
     )
     return cancel
-  }, [open, guesses])
+  }, [open, guesses, scope])
 
   const guess = guesses[turn]
   const analysis = turns[turn]
@@ -69,20 +71,36 @@ export function AnalysisDialog({ open, onClose, guesses }: AnalysisDialogProps) 
           <p class="muted analysis-step">
             Guess {turn + 1} of {guesses.length}
           </p>
+          <label class="analysis-scope">
+            <input
+              type="checkbox"
+              checked={scope === 'any'}
+              onChange={(e) => setScope(e.currentTarget.checked ? 'any' : 'possible')}
+            />
+            Consider words that can’t be the answer
+          </label>
           {error && <p class="notice notice-error">{error}</p>}
           {!analysis && !error && (
             <p class="muted">
               <span class="spinner" /> Crunching the numbers…
             </p>
           )}
-          {analysis && <TurnView guess={guess} analysis={analysis} />}
+          {analysis && <TurnView guess={guess} analysis={analysis} scope={scope} />}
         </>
       )}
     </Modal>
   )
 }
 
-function TurnView({ guess, analysis }: { guess: Guess; analysis: TurnAnalysis }) {
+function TurnView({
+  guess,
+  analysis,
+  scope,
+}: {
+  guess: Guess
+  analysis: TurnAnalysis
+  scope: BestMoveScope
+}) {
   const { played, best } = analysis
   const patternGap = best ? best.analysis.patterns - played.patterns : null
   const guessesGap = analysis.expectedGuesses
@@ -102,7 +120,7 @@ function TurnView({ guess, analysis }: { guess: Guess; analysis: TurnAnalysis })
         <Card title="You played" word={guess.word} keyString={guess.key} analysis={played} />
         {best ? (
           <Card
-            title="Best move"
+            title={scope === 'any' ? 'Best move (any word)' : 'Best move (possible answers)'}
             word={best.word}
             keyString="-----"
             analysis={best.analysis}

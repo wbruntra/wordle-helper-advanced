@@ -1,5 +1,5 @@
 import type { ComputeRequest, ComputeResult } from '../workers/compute.worker'
-import type { TurnAnalysis } from './analysis'
+import type { BestMoveScope, TurnAnalysis } from './analysis'
 import type { Ranking } from './ranking'
 import type { Guess } from '@wordle/shared'
 
@@ -53,10 +53,11 @@ export function rankInWorker(
 export function analyzeTurnsInWorker(
   words: string[],
   guesses: Guess[],
+  scope: BestMoveScope,
   onTurn: (index: number, analysis: TurnAnalysis) => void,
   onError: (message: string) => void,
 ) {
-  return start({ type: 'analyzeTurns', words, guesses }, (result) => {
+  return start({ type: 'analyzeTurns', words, guesses, scope }, (result) => {
     if (result.type === 'turn') onTurn(result.index, result.analysis)
     else if (result.type === 'error') onError(result.message)
   })
