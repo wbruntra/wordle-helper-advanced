@@ -15,28 +15,38 @@ interface AnalysisDialogProps {
 /** Turn-by-turn review comparing each guess with the best move available at that point. */
 export function AnalysisDialog({ open, onClose, guesses }: AnalysisDialogProps) {
   const [turn, setTurn] = useState(0)
-  const [turns, setTurns] = useState<Record<number, TurnAnalysis>>({})
+  /** Each result remembers the scope it was computed for, so old ones can stay up (dimmed) while new ones arrive. */
+  const [turns, setTurns] = useState<
+    Record<number, { scope: BestMoveScope; analysis: TurnAnalysis }>
+  >({})
   const [scope, setScope] = useState<BestMoveScope>('possible')
   const [error, setError] = useState<string | null>(null)
 
+  // A new game state starts the review over, at the latest turn.
   useEffect(() => {
     if (!open || guesses.length === 0) return
     setTurns({})
-    setError(null)
     setTurn(guesses.length - 1)
-    // Streams results in guess order, so earlier turns appear first.
-    const cancel = analyzeTurnsInWorker(
+  }, [open, guesses])
+
+  // Streams results in guess order, so earlier turns appear first. Changing the scope
+  // recomputes in place without resetting the turn or blanking the cards.
+  useEffect(() => {
+    if (!open || guesses.length === 0) return
+    setError(null)
+    return analyzeTurnsInWorker(
       WORDS,
       guesses,
       scope,
-      (index, analysis) => setTurns((current) => ({ ...current, [index]: analysis })),
+      (index, analysis) => setTurns((current) => ({ ...current, [index]: { scope, analysis } })),
       setError,
     )
-    return cancel
   }, [open, guesses, scope])
 
   const guess = guesses[turn]
-  const analysis = turns[turn]
+  const result = turns[turn]
+  const analysis = result?.analysis
+  const stale = result !== undefined && result.scope !== scope
 
   return (
     <Modal
@@ -71,13 +81,13 @@ export function AnalysisDialog({ open, onClose, guesses }: AnalysisDialogProps) 
           <p class="muted analysis-step">
             Guess {turn + 1} of {guesses.length}
           </p>
-          <label class="analysis-scope">
+          <label class="switch">
+            <span>Consider words that can’t be the answer</span>
             <input
               type="checkbox"
               checked={scope === 'any'}
               onChange={(e) => setScope(e.currentTarget.checked ? 'any' : 'possible')}
             />
-            Consider words that can’t be the answer
           </label>
           {error && <p class="notice notice-error">{error}</p>}
           {!analysis && !error && (
@@ -85,7 +95,11 @@ export function AnalysisDialog({ open, onClose, guesses }: AnalysisDialogProps) 
               <span class="spinner" /> Crunching the numbers…
             </p>
           )}
-          {analysis && <TurnView guess={guess} analysis={analysis} scope={scope} />}
+          {analysis && (
+            <div class={stale ? 'analysis-stale' : undefined} aria-busy={stale}>
+              <TurnView guess={guess} analysis={analysis} scope={result.scope} />
+            </div>
+          )}
         </>
       )}
     </Modal>
